@@ -54,12 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- INICIALIZAÇÃO DO FIREBASE ---
         // !! IMPORTANTE !! Cole sua configuração do Firebase aqui
         const firebaseConfig = {
-          apiKey: "COLE_SUA_API_KEY_AQUI",
-          authDomain: "SEU_PROJETO.firebaseapp.com",
-          projectId: "SEU_PROJETO_ID",
-          storageBucket: "SEU_PROJETO.appspot.com",
-          messagingSenderId: "SEU_SENDER_ID",
-          appId: "SEU_APP_ID"
+          apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
+          authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
+          projectId: "projeto-bravo-charlie-app",
+          storageBucket: "projeto-bravo-charlie-app.firebasestorage.app",
+          messagingSenderId: "26745008470",
+          appId: "1:26745008470:web:5f25965524c646b3e666f7"
         };
         
         FirebaseCourse.init(firebaseConfig);
