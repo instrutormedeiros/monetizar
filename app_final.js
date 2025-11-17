@@ -1,4 +1,4 @@
-/* === ARQUIVO app.js (CORRIGIDO PARA FIREBASE) === */
+/* === ARQUIVO app.js (CORRIGIDO PARA FIREBASE E CORES) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 feedback.textContent = "Login com sucesso! Carregando...";
             } catch (error) {
                 console.error("Erro de Login:", error.code);
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
                     feedback.textContent = "E-mail ou senha inválidos.";
                 } else {
                     feedback.textContent = "Erro ao tentar fazer login.";
@@ -505,20 +505,22 @@ document.addEventListener('DOMContentLoaded', () => {
         return newArray;
     }
     
+    // <<< INÍCIO DA CORREÇÃO DE COR >>>
     function getCategoryColor(moduleId) {
-        // ... (esta função está correta, sem alterações) ...
         if (!moduleId) return 'text-gray-500'; 
         const num = parseInt(moduleId.replace('module', ''));
+        
         for (const key in moduleCategories) {
             const cat = moduleCategories[key];
             if (num >= cat.range[0] && num <= cat.range[1]) {
+                // Compara a CHAVE (key) da categoria
                 switch (key) {
                     case 'rh': return 'text-orange-500'; 
                     case 'legislacao': return 'text-orange-500'; 
                     case 'salvamento': return 'text-blue-500'; 
                     case 'pci': return 'text-red-500'; 
-                    case 'aph_novo': return 'text-green-500'; // Corrigido de 'aph'
-                    case 'nr33': return 'text-teal-500'; // Corrigido de 'phtls'
+                    case 'aph_novo': return 'text-green-500'; // CORRIGIDO
+                    case 'nr33': return 'text-teal-500';       // CORRIGIDO
                     case 'nr35': return 'text-indigo-500'; 
                     default: return 'text-gray-500';
                 }
@@ -526,6 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'text-gray-500';
     }
+    // <<< FIM DA CORREÇÃO DE COR >>>
     
     // --- FUNÇÃO handlePersonalGreeting (REMOVIDA) ---
     // A lógica dela foi movida para onLoginSuccess() e setupAuthEventListeners()
@@ -853,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         confirmResetButton?.addEventListener('click', () => {
-            localStorage.removeItem('studentName'); // <-- Esta linha agora é controlada pelo Firebase
+            // localStorage.removeItem('studentName'); // <-- Esta linha agora é controlada pelo Firebase
             localStorage.removeItem('gateBombeiroCompletedModules_v3');
             localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
             
