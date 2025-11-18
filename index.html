@@ -158,53 +158,90 @@
         </div>
         <div id="achievement-modal-overlay" class="modal-overlay"></div>
 
-    <div id="name-prompt-modal" class="modal" style="max-width: 28rem;">
-            <div class="floating inline-block p-4 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
-                <i class="fas fa-id-card text-4xl text-blue-600 dark:text-blue-300"></i>
-            </div>
-            <h2 id="auth-title" class="text-3xl font-bold mb-2 text-gray-800 dark:text-white">Acessar Plataforma</h2>
-            <p id="auth-message" class="text-lg mb-6 text-gray-600 dark:text-gray-300">Entre com seu e-mail e senha para continuar.</p>
-            
-            <div class="space-y-4 text-left">
-                <div id="name-field-container" class="hidden">
-                    <label for="name-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome Completo</label>
-                    <input type="text" id="name-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Seu nome e sobrenome">
+        <div id="name-prompt-modal" class="modal" style="max-width: 30rem; padding: 2rem;">
+            <div id="auth-content-screen">
+                <div class="floating inline-block p-4 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+                    <i class="fas fa-id-card text-4xl text-blue-600 dark:text-blue-300"></i>
+                </div>
+                <h2 id="auth-title" class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Acessar Plataforma</h2>
+                <p id="auth-message" class="text-sm mb-4 text-gray-600 dark:text-gray-300">Entre com seu e-mail e senha.</p>
+                
+                <div class="space-y-3 text-left">
+                    <div id="name-field-container" class="hidden">
+                        <label for="name-input" class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Nome Completo</label>
+                        <input type="text" id="name-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Seu nome">
+                    </div>
+
+                    <div id="cpf-field-container" class="hidden">
+                        <label for="cpf-input" class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">CPF (Apenas números)</label>
+                        <input type="text" id="cpf-input" maxlength="14" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="000.000.000-00">
+                    </div>
+                    
+                    <div>
+                        <label for="email-input" class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                        <input type="email" id="email-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="seu@email.com">
+                    </div>
+                    
+                    <div>
+                        <label for="password-input" class="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Senha</label>
+                        <input type="password" id="password-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="••••••••">
+                    </div>
                 </div>
                 
-                <div>
-                    <label for="email-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                    <input type="email" id="email-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="seu-email@dominio.com">
+                <p id="auth-feedback" class="text-xs mt-3 font-bold text-red-600 dark:text-red-400 min-h-[1rem]"></p>
+                
+                <div id="login-button-group" class="w-full mt-3 space-y-2">
+                    <button id="login-button" class="action-button w-full"><i class="fas fa-sign-in-alt mr-2"></i> Entrar</button>
+                    <button id="show-signup-button" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline">Criar conta (Trial 30 dias)</button>
+                    <button id="toggle-payment-view" class="w-full text-xs text-green-600 dark:text-green-400 hover:underline mt-2"><i class="fas fa-crown mr-1"></i> Assinar / Renovar Acesso</button>
                 </div>
                 
-                <div>
-                    <label for="password-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
-                    <input type="password" id="password-input" class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="••••••••">
+                <div id="signup-button-group" class="w-full mt-3 space-y-2 hidden">
+                    <button id="signup-button" class="action-button w-full" style="background: var(--success);"><i class="fas fa-user-plus mr-2"></i> Cadastrar e Iniciar</button>
+                    <button id="show-login-button" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline">Voltar para Login</button>
                 </div>
             </div>
-            
-            <p id="auth-feedback" class="text-sm mt-4 text-red-600 dark:text-red-400 h-4"></p>
-            
-            <div id="login-button-group" class="w-full mt-4 space-y-2">
-                <button id="login-button" class="action-button w-full"><i class="fas fa-sign-in-alt mr-2"></i> Entrar</button>
-                <button id="show-signup-button" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline">Não tenho conta, quero me cadastrar</button>
+
+            <div id="payment-content-screen" class="hidden text-left">
+                <div class="text-center mb-4">
+                    <div class="inline-block p-3 bg-green-100 dark:bg-green-900 rounded-full mb-2">
+                        <i class="fas fa-gem text-3xl text-green-600 dark:text-green-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-white">Plano Anual</h3>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm">Tenha acesso ilimitado por 1 ano.</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-bold text-gray-700 dark:text-gray-200">Valor:</span>
+                        <span class="text-xl font-bold text-green-600 dark:text-green-400">R$ 49,90</span>
+                    </div>
+                    <hr class="border-gray-300 dark:border-gray-600 my-2">
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Chave PIX (Copia e Cola):</p>
+                    <div class="flex space-x-2">
+                        <input type="text" value="CHAVE_PIX_AQUI" id="pix-key-input" readonly class="w-full p-2 text-xs bg-white dark:bg-gray-800 border rounded">
+                        <button onclick="navigator.clipboard.writeText(document.getElementById('pix-key-input').value); alert('Chave PIX copiada!')" class="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                
+                <button class="action-button w-full mb-3" onclick="window.open('SEU_LINK_DE_PAGAMENTO_AQUI', '_blank')">
+                    <i class="fas fa-external-link-alt mr-2"></i> Pagar com Cartão / Link
+                </button>
+                
+                <button id="back-to-auth-from-payment" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline text-center">
+                    <i class="fas fa-arrow-left mr-1"></i> Voltar
+                </button>
             </div>
-            
-            <div id="signup-button-group" class="w-full mt-4 space-y-2 hidden">
-                <button id="signup-button" class="action-button w-full" style="background: var(--success);"><i class="fas fa-user-plus mr-2"></i> Criar Conta (Trial 30 Dias)</button>
-                <button id="show-login-button" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline">Já tenho conta, fazer login</button>
-            </div>
+
         </div>
         <div id="name-modal-overlay" class="modal-overlay"></div>
-    <div id="expired-modal" class="modal">
+        <div id="expired-modal" class="modal">
             <div class="floating inline-block p-4 bg-red-100 dark:bg-red-900 rounded-full mb-4">
                 <i class="fas fa-calendar-times text-4xl text-red-600 dark:text-red-300"></i>
             </div>
             <h2 class="text-3xl font-bold mb-2 text-gray-800 dark:text-white">Acesso Expirado</h2>
             <p class="text-lg mb-6 text-gray-600 dark:text-gray-300">
                 Seu período de avaliação de 30 dias terminou. Para continuar acessando, renove seu plano (R$ 49,90 / ano).
-            </p>
-            <p class="text-sm mb-6 text-gray-500 dark:text-gray-400">
-                Entre em contato com o administrador (via PIX ou link de pagamento) para reativar seu acesso.
             </p>
             <div class="flex justify-center space-x-4">
                 <button id="logout-expired-button" class="action-button" style="background: var(--primary);"><i class="fas fa-sign-out-alt mr-2"></i> Sair</button>
@@ -255,8 +292,7 @@
     <nav id="focus-nav-bar" class="lg:hidden fixed bottom-0 left-0 w-full z-40">
         <div class="flex justify-around items-center h-16 bg-white dark:bg-gray-800 shadow-[0_-2px_10px_rgba(0,0,0,0.1)] dark:border-t dark:border-gray-700">
             <button id="focus-nav-modules" class="flex flex-col items-center justify-center text-gray-600 dark:text-gray-300 w-full h-full">
-                <i class="fas fa-list-ul text-2xl"></i><span class="text-xs">Módulos</span>
-            </button>
+                <i class="fas fa-list-ul text-2xl"></i><span class="text-xs">Módulos</span></button>
             <button id="focus-nav-exit" class="flex flex-col items-center justify-center text-red-500 dark:text-red-400 w-full h-full">
                 <i class="fas fa-times-circle text-2xl"></i><span class="text-xs">Sair</span>
             </button>
@@ -271,8 +307,9 @@
             <i class="fas fa-times"></i>
          </button>
     </div>
+
     
-    <script src="quizzes.js" defer></script>
+<script src="quizzes.js" defer></script>
 <script src="data.js" defer></script>
 <script src="course.js" defer></script>
 <script src="firebase-init.js" defer></script>
