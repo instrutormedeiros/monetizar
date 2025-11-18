@@ -1,4 +1,4 @@
-/* === ARQUIVO app.js (CORRIGIDO PARA FIREBASE E CORES) === */
+/* === ARQUIVO app.js (CORREÇÃO DE ESCOPO/FIREBASE) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -42,7 +42,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- SELETORES DO DOM ---
     const toastContainer = document.getElementById('toast-container');
     const sidebar = document.getElementById('off-canvas-sidebar');
-    // ... (todos os outros seletores DOM estão corretos) ...
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const printWatermark = document.getElementById('print-watermark'); // <--- Variável que estava causando o erro
+    const achievementModal = document.getElementById('achievement-modal');
+    const achievementOverlay = document.getElementById('achievement-modal-overlay');
+    const closeAchButton = document.getElementById('close-ach-modal');
+    const breadcrumbContainer = document.getElementById('breadcrumb-container');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    
+    const resetModal = document.getElementById('reset-modal');
+    const resetOverlay = document.getElementById('reset-modal-overlay');
     const confirmResetButton = document.getElementById('confirm-reset-button');
     const cancelResetButton = document.getElementById('cancel-reset-button');
 
@@ -54,12 +63,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- INICIALIZAÇÃO DO FIREBASE ---
         // !! IMPORTANTE !! Cole sua configuração do Firebase aqui
         const firebaseConfig = {
-          apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
-          authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
-          projectId: "projeto-bravo-charlie-app",
-          storageBucket: "projeto-bravo-charlie-app.firebasestorage.app",
-          messagingSenderId: "26745008470",
-          appId: "1:26745008470:web:5f25965524c646b3e666f7"
+          apiKey: "COLE_SUA_API_KEY_AQUI",
+          authDomain: "SEU_PROJETO.firebaseapp.com",
+          projectId: "SEU_PROJETO_ID",
+          storageBucket: "SEU_PROJETO.appspot.com",
+          messagingSenderId: "SEU_SENDER_ID",
+          appId: "SEU_APP_ID"
         };
         
         FirebaseCourse.init(firebaseConfig);
@@ -73,7 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // O checkAuth agora controla o início do app
         // Ele chamará onLoginSuccess APENAS se o acesso for válido
-        FirebaseCourse.checkAuth(onLoginSuccess);
+        
+        // <<< INÍCIO DA CORREÇÃO DE ESCOPO >>>
+        // Envolvemos a chamada em uma arrow function para manter o escopo de 'app_final.js'.
+        FirebaseCourse.checkAuth((user, userData) => {
+            onLoginSuccess(user, userData);
+        });
+        // <<< FIM DA CORREÇÃO DE ESCOPO >>>
     }
     
     // --- NOVA FUNÇÃO: INICIA O APP APÓS LOGIN VÁLIDO ---
@@ -89,6 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
         
         // 3. Define a marca d'água (lógica do antigo setupPrintWatermarkContent)
+        // Esta linha agora funciona, pois 'printWatermark' está no escopo.
         if (printWatermark) {
             printWatermark.textContent = `Conteúdo Exclusivo de ${userData.name} - Proibida a Reprodução`;
         }
@@ -505,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return newArray;
     }
     
-    // <<< INÍCIO DA CORREÇÃO DE COR >>>
+    // --- FUNÇÃO DE CORES (CORRIGIDA) ---
     function getCategoryColor(moduleId) {
         if (!moduleId) return 'text-gray-500'; 
         const num = parseInt(moduleId.replace('module', ''));
@@ -528,18 +544,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'text-gray-500';
     }
-    // <<< FIM DA CORREÇÃO DE COR >>>
-    
-    // --- FUNÇÃO handlePersonalGreeting (REMOVIDA) ---
-    // A lógica dela foi movida para onLoginSuccess() e setupAuthEventListeners()
     
     // --- FUNÇÃO setupPrintWatermarkContent (MODIFICADA) ---
     function setupPrintWatermarkContent(name) {
-        // Agora recebe o nome, em vez de ler do localStorage
-        const studentName = name || 'Aluno(a)';
-        if (printWatermark) {
-            printWatermark.textContent = `Conteúdo Exclusivo de ${studentName} - Proibida a Reprodução`;
-        }
+        // Esta função não é mais chamada por handlePersonalGreeting
+        // Ela é chamada por onLoginSuccess
     }
     
     function closeSidebar() {
