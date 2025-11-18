@@ -1,21 +1,30 @@
-/* === ARQUIVO app_final.js (CORRIGIDO - ESCOPO GLOBAL SEGURO) === */
+/* === ARQUIVO app_final.js (CORREÇÃO DE ESCOPO GLOBAL) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ===========================================================
-    // 1. DECLARAÇÃO DE VARIÁVEIS E SELETORES (No topo do escopo)
-    // ===========================================================
+    // =================================================================
+    // 1. DECLARAÇÃO GLOBAL DE VARIÁVEIS (Acessíveis por todas as funções)
+    // =================================================================
     
-    // Elementos UI Críticos
+    // Elementos UI Principais
     const contentArea = document.getElementById('content-area');
     const loadingSpinner = document.getElementById('loading-spinner');
     const welcomeContainer = document.getElementById('welcome-greeting-container');
     const breadcrumbContainer = document.getElementById('breadcrumb-container');
     const stickyProgress = document.getElementById('sticky-progress-wrapper');
+    const mainHeader = document.getElementById('main-header');
+    const footer = document.querySelector('footer');
+    const navMobile = document.querySelector('nav.lg\\:hidden');
+
+    // Elementos de Navegação e Sidebar
     const sidebar = document.getElementById('off-canvas-sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const printWatermark = document.getElementById('print-watermark');
+    const mobileMenuBtn = document.getElementById('mobile-menu-button');
+    const closeSidebarBtn = document.getElementById('close-sidebar-button');
+    
+    // Elementos de Notificação e Feedback
     const toastContainer = document.getElementById('toast-container');
+    const printWatermark = document.getElementById('print-watermark');
 
     // Modais
     const namePromptModal = document.getElementById('name-prompt-modal');
@@ -26,10 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const achievementOverlay = document.getElementById('achievement-modal-overlay');
     const resetModal = document.getElementById('reset-modal');
     const resetOverlay = document.getElementById('reset-modal-overlay');
-    const modalOverlay = document.getElementById('modal-overlay');
+    const modalOverlay = document.getElementById('modal-overlay'); // Overlay genérico
 
-    // Dados e Estado
-    // Garante que as variáveis de dados existam para evitar crash
+    // Dados do Curso
     const hasData = (typeof moduleContent !== 'undefined' && typeof moduleCategories !== 'undefined');
     const totalModules = hasData ? Object.keys(moduleContent).length : 0;
     let completedModules = JSON.parse(localStorage.getItem('gateBombeiroCompletedModules_v3')) || [];
@@ -37,27 +45,38 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModuleId = null;
     let cachedQuestionBanks = {}; 
 
-    // ===========================================================
-    // 2. VERIFICAÇÃO DE SEGURANÇA
-    // ===========================================================
+
+    // =================================================================
+    // 2. VERIFICAÇÃO DE SEGURANÇA (CRÍTICA)
+    // =================================================================
     if (!hasData || typeof questionSources === 'undefined') {
-        console.error("Arquivos de dados (data.js/course.js) ausentes.");
+        console.error("Arquivos de dados (data.js/course.js) ausentes ou corrompidos.");
+        
+        // Esconde elementos de navegação para focar no erro
+        if(mainHeader) mainHeader.classList.add('hidden');
+        if(footer) footer.classList.add('hidden');
+        if(navMobile) navMobile.classList.add('hidden');
+        if(welcomeContainer) welcomeContainer.classList.add('hidden');
+        if(breadcrumbContainer) breadcrumbContainer.classList.add('hidden');
+        if(stickyProgress) stickyProgress.classList.add('hidden');
+
         if (contentArea) {
             contentArea.innerHTML = `
                 <div class="text-center py-10 px-6">
-                    <h2 class="text-2xl font-bold text-red-600 mb-4">Erro de Dados</h2>
-                    <p class="text-gray-600 mb-4">Não foi possível carregar o conteúdo do curso.</p>
+                    <h2 class="text-2xl font-bold text-red-600 mb-4">Erro de Carregamento</h2>
+                    <p class="text-gray-600 mb-4">Os arquivos de dados essenciais não foram encontrados.</p>
                     <button onclick="location.reload()" class="action-button">Recarregar Página</button>
                 </div>`;
             contentArea.closest('.bg-white')?.classList.remove('hidden');
             if(loadingSpinner) loadingSpinner.classList.add('hidden');
         }
-        return; // Para a execução aqui se faltar dados
+        return; // Interrompe a execução se não houver dados
     }
 
-    // ===========================================================
+
+    // =================================================================
     // 3. FUNÇÃO DE INICIALIZAÇÃO (INIT)
-    // ===========================================================
+    // =================================================================
     function init() {
         setupProtection();
         setupTheme();
@@ -75,34 +94,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof FirebaseCourse !== 'undefined') {
              FirebaseCourse.init(firebaseConfig);
              
+             // Configura os listeners de Autenticação (Login/Cadastro)
              setupAuthEventListeners(); 
              
-             // Logout Listeners
+             // Configura Logout
              document.querySelectorAll('#logout-button, #logout-expired-button').forEach(btn => {
                  btn.addEventListener('click', FirebaseCourse.signOutUser);
              });
 
-             // Check Auth
+             // Verifica Autenticação
              FirebaseCourse.checkAuth((user, userData) => {
                 onLoginSuccess(user, userData);
              });
         } else {
-            alert("Erro: Sistema de login não carregado.");
+            alert("Erro Crítico: Firebase não carregado.");
         }
         
-        // UI Listeners (Independente de Login)
+        // Inicia Listeners Globais (UI) independentes do Login
         setupHeaderScroll();
         setupRippleEffects();
         addGlobalEventListeners(); 
     }
     
-    // ===========================================================
-    // 4. LÓGICA PÓS-LOGIN
-    // ===========================================================
+    // =================================================================
+    // 4. LÓGICA DE LOGIN E DESBLOQUEIO
+    // =================================================================
     function onLoginSuccess(user, userData) {
         console.log(`App liberado para: ${userData.name}`);
         
-        // Esconde modais de login
+        // Esconde Modais de Login
         if(namePromptModal) namePromptModal.classList.remove('show');
         if(nameModalOverlay) nameModalOverlay.classList.remove('show');
         
@@ -110,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const greetingEl = document.getElementById('welcome-greeting');
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
         
-        // Marca D'água
+        // Marca D'água de Segurança
         if (printWatermark) {
             printWatermark.textContent = `Licenciado para: ${userData.name} - CPF: ${userData.cpf}`;
         }
@@ -121,15 +141,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if(totalEl) totalEl.textContent = totalModules;
         if(courseEl) courseEl.textContent = totalModules;
         
-        // Carrega Conteúdo
+        // Preenche Listas e Carrega Progresso
         populateModuleLists();
         updateProgress();
+        
+        // Carrega o último módulo acessado ou vai para Home
         handleInitialLoad();
     }
 
-    // ===========================================================
-    // 5. CARREGAMENTO DE CONTEÚDO (Correção do Erro)
-    // ===========================================================
+    // =================================================================
+    // 5. LÓGICA DE CARREGAMENTO DE CONTEÚDO (MÓDULOS)
+    // =================================================================
     function handleInitialLoad() {
         const lastModule = localStorage.getItem('gateBombeiroLastModule');
         if (lastModule) {
@@ -147,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return questions;
     }
 
+    // *** CORREÇÃO DO ERRO DE REFERÊNCIA AQUI ***
+    // loadingSpinner e contentArea agora são globais, acessíveis aqui.
     async function loadModuleContent(id) {
         if (!id || !moduleContent[id]) return;
         currentModuleId = id;
@@ -156,28 +180,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedNote = localStorage.getItem('note-' + id) || ''; 
         const categoryColor = getCategoryColor(id);
         
-        // Transição UI
+        // UI: Mostra Spinner
         if(contentArea) {
             contentArea.style.opacity = '0';
             contentArea.classList.add('hidden');
         }
-        // AQUI ESTAVA O ERRO: Agora loadingSpinner está definido no topo
         if(loadingSpinner) loadingSpinner.classList.remove('hidden');
 
+        // Carrega Quiz (Assíncrono)
         let allQuestions = await loadQuestionBank(id);
         
+        // Renderiza após pequeno delay para transição
         setTimeout(() => {
             if(loadingSpinner) loadingSpinner.classList.add('hidden');
+            
             if(contentArea) {
                 contentArea.classList.remove('hidden'); 
 
-                // HTML do Módulo
+                // HTML do Conteúdo
                 let html = `
                     <h3 class="flex items-center text-3xl mb-6 pb-4 border-b"><i class="${d.iconClass} mr-4 ${categoryColor} fa-fw"></i>${d.title}</h3>
                     <div class="content-body">${d.content}</div>
                 `;
 
-                // Quiz
+                // HTML do Quiz
                 if (allQuestions && allQuestions.length > 0) {
                     const count = Math.min(allQuestions.length, 4); 
                     const shuffledQuestions = shuffleArray(allQuestions).slice(0, count);
@@ -195,10 +221,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     html += quizHtml;
                 } else {
-                    html += `<div class="warning-box mt-8">Sem exercícios disponíveis.</div>`;
+                    html += `<div class="warning-box mt-8">Sem exercícios disponíveis para este módulo.</div>`;
                 }
 
-                // Botão Concluir e Notas
+                // HTML de Conclusão e Notas
                 html += `
                     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
                         <button class="action-button conclude-button" data-module="${id}">Concluir Módulo</button>
@@ -211,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentArea.innerHTML = html;
                 contentArea.style.opacity = '1';
                 
-                // Re-conecta Listeners
+                // Re-conecta Listeners Específicos do Conteúdo
                 setupQuizListeners();
                 setupConcludeButtonListener();
                 setupNotesListener(id);
@@ -232,12 +258,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 
-    // ===========================================================
-    // 6. INTERFACE E EVENTOS (Listeners)
-    // ===========================================================
+    // =================================================================
+    // 6. LISTENERS GLOBAIS DE UI (Eventos da Página)
+    // =================================================================
     function addGlobalEventListeners() {
         
-        // Módulos e Acordeão
+        // Clique em itens da lista de módulos (Navegação)
         document.body.addEventListener('click', e => {
             const item = e.target.closest('.module-list-item');
             if (item) {
@@ -245,10 +271,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.innerWidth < 1024) closeSidebar();
             }
             
+            // Acordeão (Expandir/Recolher)
             const accBtn = e.target.closest('.accordion-button');
             if (accBtn) {
                 const p = accBtn.nextElementSibling;
                 const isActive = accBtn.classList.contains('active');
+                // Fecha irmãos
                 const container = accBtn.closest('.module-accordion-container');
                 if(container) {
                     container.querySelectorAll('.accordion-panel').forEach(panel => {
@@ -258,6 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 }
+                // Alterna atual
                 if (!isActive) { 
                     accBtn.classList.add('active'); 
                     p.style.maxHeight = p.scrollHeight + "px"; 
@@ -268,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Navegação
+        // Botões Anterior/Próximo (Footer do Módulo)
         document.getElementById('prev-module')?.addEventListener('click', () => {
             const n = parseInt(currentModuleId.replace('module',''));
             if(n > 1) loadModuleContent(`module${n-1}`);
@@ -278,38 +307,47 @@ document.addEventListener('DOMContentLoaded', () => {
             if(n < totalModules) loadModuleContent(`module${n+1}`);
         });
         
-        // Sidebar
+        // Sidebar Toggles (Abrir/Fechar)
         const toggleSidebar = () => {
-            if (sidebar) {
+            if(sidebar) {
                 if (sidebar.classList.contains('open')) closeSidebar(); else openSidebar();
             }
         };
-        ['mobile-menu-button', 'bottom-nav-modules', 'focus-menu-modules', 'focus-nav-modules'].forEach(id => {
-            document.getElementById(id)?.addEventListener('click', toggleSidebar);
+        
+        // Lista de IDs que abrem a sidebar
+        const sidebarTriggerIds = ['mobile-menu-button', 'bottom-nav-modules', 'focus-menu-modules', 'focus-nav-modules'];
+        sidebarTriggerIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('click', toggleSidebar);
         });
-        document.getElementById('close-sidebar-button')?.addEventListener('click', closeSidebar);
+
+        if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
         if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
         
-        // Home e Tema
+        // Botões Home
         const goHome = () => goToHomePage();
         ['home-button-desktop', 'bottom-nav-home', 'home-breadcrumb'].forEach(id => {
-            document.getElementById(id)?.addEventListener('click', goHome);
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('click', goHome);
         });
         
+        // Botões Tema
         ['bottom-nav-theme', 'dark-mode-toggle-desktop'].forEach(id => {
-            document.getElementById(id)?.addEventListener('click', toggleTheme);
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('click', toggleTheme);
         });
         
-        // Foco
+        // Botões Modo Foco
         const toggleFocus = () => {
             document.body.classList.toggle('focus-mode');
             if (!document.body.classList.contains('focus-mode')) closeSidebar();
         };
         ['focus-mode-toggle', 'bottom-nav-focus', 'focus-menu-exit', 'focus-nav-exit'].forEach(id => {
-            document.getElementById(id)?.addEventListener('click', toggleFocus);
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('click', toggleFocus);
         });
 
-        // Modais
+        // Modais (Fechar)
         document.getElementById('close-congrats')?.addEventListener('click', () => {
             if(congratsModal) congratsModal.classList.remove('show');
             if(modalOverlay) modalOverlay.classList.remove('show');
@@ -319,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(achievementOverlay) achievementOverlay.classList.remove('show');
         });
 
-        // Reset
+        // Reset Progresso
         const showReset = () => {
              if(resetModal) resetModal.classList.add('show');
              if(resetOverlay) resetOverlay.classList.add('show');
@@ -339,7 +377,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.reload();
         });
         
-        // Back to top
+        // Back to Top
         const backToTop = document.getElementById('back-to-top');
         if (backToTop) {
             window.addEventListener('scroll', () => {
@@ -355,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
             backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
         }
         
-        // Busca
+        // Busca de Módulos
         document.body.addEventListener('input', e => {
             if(e.target.matches('.module-search')) {
                 const s = e.target.value.toLowerCase();
@@ -370,9 +408,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // ===========================================================
-    // 7. LÓGICA DE AUTENTICAÇÃO E CPF
-    // ===========================================================
+    // =================================================================
+    // 7. VALIDAÇÃO DE CPF E EVENTOS DE AUTH
+    // =================================================================
     function isValidCPF(cpf) {
         cpf = cpf.replace(/[^\d]+/g,'');
         if(cpf == '') return false;
@@ -401,99 +439,132 @@ document.addEventListener('DOMContentLoaded', () => {
         const authScreen = document.getElementById('auth-content-screen');
         const paymentScreen = document.getElementById('payment-content-screen');
 
+        // Máscara CPF
         const cpfInput = document.getElementById('cpf-input');
-        cpfInput?.addEventListener('input', e => {
-            let v = e.target.value.replace(/\D/g, "");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d)/, "$1.$2");
-            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            e.target.value = v;
-        });
+        if(cpfInput) {
+            cpfInput.addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, "");
+                v = v.replace(/(\d{3})(\d)/, "$1.$2");
+                v = v.replace(/(\d{3})(\d)/, "$1.$2");
+                v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+                e.target.value = v;
+            });
+        }
 
+        // Botões Alternar Login/Cadastro
         document.getElementById('show-signup-button')?.addEventListener('click', () => {
-            loginGroup.classList.add('hidden');
-            signupGroup.classList.remove('hidden');
-            nameField.classList.remove('hidden');
-            cpfField.classList.remove('hidden');
-            authTitle.textContent = "Criar Nova Conta";
-            authMsg.textContent = "Preencha seus dados para iniciar.";
-            feedback.textContent = "";
+            if(loginGroup) loginGroup.classList.add('hidden');
+            if(signupGroup) signupGroup.classList.remove('hidden');
+            if(nameField) nameField.classList.remove('hidden');
+            if(cpfField) cpfField.classList.remove('hidden');
+            if(authTitle) authTitle.textContent = "Criar Nova Conta";
+            if(authMsg) authMsg.textContent = "Preencha seus dados para iniciar.";
+            if(feedback) feedback.textContent = "";
         });
         
         document.getElementById('show-login-button')?.addEventListener('click', () => {
-            loginGroup.classList.remove('hidden');
-            signupGroup.classList.add('hidden');
-            nameField.classList.add('hidden');
-            cpfField.classList.add('hidden');
-            authTitle.textContent = "Acessar Plataforma";
-            authMsg.textContent = "Entre com seu e-mail e senha.";
-            feedback.textContent = "";
+            if(loginGroup) loginGroup.classList.remove('hidden');
+            if(signupGroup) signupGroup.classList.add('hidden');
+            if(nameField) nameField.classList.add('hidden');
+            if(cpfField) cpfField.classList.add('hidden');
+            if(authTitle) authTitle.textContent = "Acessar Plataforma";
+            if(authMsg) authMsg.textContent = "Entre com seu e-mail e senha.";
+            if(feedback) feedback.textContent = "";
         });
 
+        // Botões Pagamento
         document.getElementById('toggle-payment-view')?.addEventListener('click', () => {
-            authScreen.classList.add('hidden');
-            paymentScreen.classList.remove('hidden');
+            if(authScreen) authScreen.classList.add('hidden');
+            if(paymentScreen) paymentScreen.classList.remove('hidden');
         });
 
         document.getElementById('back-to-auth-from-payment')?.addEventListener('click', () => {
-            paymentScreen.classList.add('hidden');
-            authScreen.classList.remove('hidden');
+            if(paymentScreen) paymentScreen.classList.add('hidden');
+            if(authScreen) authScreen.classList.remove('hidden');
         });
         
+        // Login Action
         document.getElementById('login-button')?.addEventListener('click', async () => {
             const email = document.getElementById('email-input').value;
             const pass = document.getElementById('password-input').value;
             
-            if (!email || !pass) return feedback.textContent = "Preencha e-mail e senha.";
+            if (!email || !pass) {
+                if(feedback) feedback.textContent = "Preencha e-mail e senha.";
+                return;
+            }
             
-            feedback.className = "text-xs mt-3 font-bold text-blue-600";
-            feedback.textContent = "Verificando...";
+            if(feedback) {
+                feedback.className = "text-xs mt-3 font-bold text-blue-600";
+                feedback.textContent = "Verificando...";
+            }
 
             try {
                 await FirebaseCourse.signInWithEmail(email, pass);
-                feedback.className = "text-xs mt-3 font-bold text-green-600";
-                feedback.textContent = "Sucesso! Carregando...";
+                if(feedback) {
+                    feedback.className = "text-xs mt-3 font-bold text-green-600";
+                    feedback.textContent = "Sucesso! Carregando...";
+                }
             } catch (e) {
                 console.error(e);
-                feedback.className = "text-xs mt-3 font-bold text-red-600";
-                if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-                    feedback.textContent = "E-mail ou senha incorretos.";
-                } else {
-                    feedback.textContent = "Erro ao entrar.";
+                if(feedback) {
+                    feedback.className = "text-xs mt-3 font-bold text-red-600";
+                    if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
+                        feedback.textContent = "E-mail ou senha incorretos.";
+                    } else {
+                        feedback.textContent = "Erro ao entrar.";
+                    }
                 }
             }
         });
         
+        // Cadastro Action
         document.getElementById('signup-button')?.addEventListener('click', async () => {
             const name = document.getElementById('name-input').value;
             const cpf = document.getElementById('cpf-input').value;
             const email = document.getElementById('email-input').value;
             const pass = document.getElementById('password-input').value;
             
-            feedback.className = "text-xs mt-3 font-bold text-red-600";
+            if(feedback) feedback.className = "text-xs mt-3 font-bold text-red-600";
 
-            if (!name || !cpf || !email || !pass) return feedback.textContent = "Preencha todos os campos.";
-            if (pass.length < 6) return feedback.textContent = "Senha muito curta (mín. 6).";
-            if (!isValidCPF(cpf)) return feedback.textContent = "CPF Inválido.";
+            if (!name || !cpf || !email || !pass) {
+                if(feedback) feedback.textContent = "Preencha todos os campos.";
+                return;
+            }
+            if (pass.length < 6) {
+                if(feedback) feedback.textContent = "Senha muito curta (mín. 6).";
+                return;
+            }
+            if (!isValidCPF(cpf)) {
+                if(feedback) feedback.textContent = "CPF Inválido.";
+                return;
+            }
             
-            feedback.className = "text-xs mt-3 font-bold text-blue-600";
-            feedback.textContent = "Criando conta...";
+            if(feedback) {
+                feedback.className = "text-xs mt-3 font-bold text-blue-600";
+                feedback.textContent = "Criando conta...";
+            }
 
             try {
                 await FirebaseCourse.signUpWithEmail(name, email, pass, cpf);
-                feedback.className = "text-xs mt-3 font-bold text-green-600";
-                feedback.textContent = "Conta criada! Acessando...";
+                if(feedback) {
+                    feedback.className = "text-xs mt-3 font-bold text-green-600";
+                    feedback.textContent = "Conta criada! Acessando...";
+                }
             } catch (e) {
                 console.error(e);
-                feedback.className = "text-xs mt-3 font-bold text-red-600";
-                if (e.message === 'CPF_ALREADY_IN_USE') feedback.textContent = "Este CPF já possui cadastro.";
-                else if (e.code === 'auth/email-already-in-use') feedback.textContent = "Este e-mail já está em uso.";
-                else feedback.textContent = "Erro ao criar conta.";
+                if(feedback) {
+                    feedback.className = "text-xs mt-3 font-bold text-red-600";
+                    if (e.message === 'CPF_ALREADY_IN_USE') feedback.textContent = "Este CPF já possui cadastro.";
+                    else if (e.code === 'auth/email-already-in-use') feedback.textContent = "Este e-mail já está em uso.";
+                    else feedback.textContent = "Erro ao criar conta.";
+                }
             }
         });
     }
 
-    // --- FUNÇÕES AUXILIARES ---
+    // =================================================================
+    // 8. FUNÇÕES AUXILIARES DE LÓGICA DO CURSO
+    // =================================================================
     function setupConcludeButtonListener() {
         if (!currentModuleId) return;
         const oldB = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
@@ -510,6 +581,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
+
     function handleConcludeButtonClick(b) {
         const id = b.dataset.module;
         if (id && !completedModules.includes(id)) {
@@ -522,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(typeof confetti === 'function') confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, zIndex: 2000 });
         }
     }
+
     function showAchievementToast(title) {
         const toast = document.createElement('div');
         toast.className = 'toast';
@@ -529,9 +602,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(toastContainer) toastContainer.appendChild(toast);
         setTimeout(() => toast.remove(), 4500);
     }
+    
     function updateActiveModuleInList() {
         document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('active', i.dataset.module === currentModuleId));
     }
+    
     function updateNavigationButtons() {
         const prev = document.getElementById('prev-module');
         const next = document.getElementById('next-module');
@@ -540,16 +615,20 @@ document.addEventListener('DOMContentLoaded', () => {
         prev.disabled = (n === 1);
         next.disabled = (n === totalModules);
     }
+    
     function setupQuizListeners() {
         document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
     }
+
     function triggerSuccessParticles(e, el) {
       if (typeof confetti === 'function') confetti({ particleCount: 28, spread: 70, origin: { x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight } });
     }
+
     function setupHeaderScroll() {
         const h = document.getElementById('main-header');
         if (h) window.addEventListener('scroll', () => h.classList.toggle('scrolled', window.scrollY > 50));
     }
+
     function setupRippleEffects() {
         document.addEventListener('click', e => {
             const btn = e.target.closest('.action-button') || e.target.closest('.quiz-option');
@@ -565,6 +644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     function updateBreadcrumbs(moduleTitle = 'Início') {
         if (currentModuleId) {
             const category = Object.values(moduleCategories).find(cat => {
@@ -579,10 +659,12 @@ document.addEventListener('DOMContentLoaded', () => {
             breadcrumbContainer.innerHTML = `<span class="text-blue-600"><i class="fas fa-home mr-1"></i> Início</span>`;
         }
     }
+    
     function setupNotesListener(id) {
         const ta = document.getElementById(`notes-module-${id}`);
         if (ta) ta.addEventListener('keyup', () => localStorage.setItem('note-' + id, ta.value));
     }
+    
     function getCategoryColor(moduleId) {
         if (!moduleId) return 'text-gray-500'; 
         const num = parseInt(moduleId.replace('module', ''));
@@ -603,6 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'text-gray-500';
     }
+    
     function closeSidebar() {
         if(sidebar) sidebar.classList.remove('open');
         if(sidebarOverlay) {
@@ -610,6 +693,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
         }
     }
+    
     function openSidebar() {
         if(sidebar) sidebar.classList.add('open');
         if(sidebarOverlay) {
@@ -617,6 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => sidebarOverlay.classList.add('show'), 10);
         }
     }
+    
     function populateModuleLists() {
         const html = getModuleListHTML();
         const deskContainer = document.getElementById('desktop-module-container');
@@ -624,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(deskContainer) deskContainer.innerHTML = html;
         if(mobContainer) mobContainer.innerHTML = html;
     }
+    
     function getModuleListHTML() {
         let html = `<div class="mb-4 relative"><input type="text" class="module-search w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-sm" placeholder="Buscar módulo..."></div>
                     <div class="module-accordion-container space-y-2">`;
@@ -642,6 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `</div>`;
         return html;
     }
+
     function updateProgress() {
         const p = (completedModules.length / totalModules) * 100;
         const tEl = document.getElementById('progress-text');
@@ -654,27 +741,34 @@ document.addEventListener('DOMContentLoaded', () => {
         checkAchievements();
         if (totalModules > 0 && completedModules.length === totalModules) showCongratulations();
     }
+
     function updateModuleListStyles() {
         document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('completed', completedModules.includes(i.dataset.module)));
     }
+
     function checkAchievements() {
-        // Lógica de conquistas mantida para cálculo, mesmo sem display
+        // Lógica de conquistas (Mantida)
     }
+
     function showCongratulations() {
         if(congratsModal) congratsModal.classList.add('show');
         if(modalOverlay) modalOverlay.classList.add('show');
         if(typeof confetti === 'function') confetti({particleCount:150, spread:90, origin:{y:0.6},zIndex:200});
     }
+
     function toggleTheme() {
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
         updateThemeIcons();
     }
+
     function updateThemeIcons() {
-        // O CSS ::after cuida do mobile
+        // Ícone Desktop
         const deskBtn = document.querySelector('#dark-mode-toggle-desktop i');
         if(deskBtn) deskBtn.className = document.documentElement.classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
+        // Ícone Mobile é CSS puro
     }
+
     function goToHomePage() {
         localStorage.removeItem('gateBombeiroLastModule'); 
         if (contentArea) contentArea.innerHTML = `<div class="text-center py-8"><div class="floating inline-block p-5 bg-red-100 dark:bg-red-900/50 rounded-full mb-6"><i class="fas fa-fire-extinguisher text-6xl text-red-600"></i></div><h2 class="text-4xl font-bold mb-4 text-blue-900 dark:text-white">Torne-se um Profissional de Elite</h2><p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">Bem-vindo ao <strong class="font-bold text-orange-500 dark:text-orange-400">Curso de Formação para Bombeiro Civil e Brigadista</strong>.</p><button id="start-course" class="action-button pulse text-lg"><i class="fas fa-play-circle mr-2"></i> Iniciar Curso Agora</button></div>`;
@@ -697,12 +791,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     function setupProtection() {
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
           if (e.key === 'F12' || (e.ctrlKey && ['p','c','u'].includes(e.key.toLowerCase()))) e.preventDefault();
         });
     }
+
     function setupTheme() {
         const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', isDark);
@@ -710,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===========================================================
-    // 7. INICIALIZAÇÃO
+    // 9. INICIALIZAÇÃO
     // ===========================================================
     init();
 
