@@ -1,4 +1,4 @@
-/* === ARQUIVO app_final.js (CORREÇÃO DE ESCOPO GLOBAL) === */
+/* === ARQUIVO app_final.js (CORRIGIDO: shuffleArray + Escopo Global) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const achievementOverlay = document.getElementById('achievement-modal-overlay');
     const resetModal = document.getElementById('reset-modal');
     const resetOverlay = document.getElementById('reset-modal-overlay');
-    const modalOverlay = document.getElementById('modal-overlay'); // Overlay genérico
+    const modalOverlay = document.getElementById('modal-overlay');
 
     // Dados do Curso
     const hasData = (typeof moduleContent !== 'undefined' && typeof moduleCategories !== 'undefined');
@@ -169,8 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return questions;
     }
 
-    // *** CORREÇÃO DO ERRO DE REFERÊNCIA AQUI ***
-    // loadingSpinner e contentArea agora são globais, acessíveis aqui.
     async function loadModuleContent(id) {
         if (!id || !moduleContent[id]) return;
         currentModuleId = id;
@@ -206,7 +204,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 // HTML do Quiz
                 if (allQuestions && allQuestions.length > 0) {
                     const count = Math.min(allQuestions.length, 4); 
+                    // === AQUI ESTAVA O ERRO: shuffleArray AGORA EXISTE ===
                     const shuffledQuestions = shuffleArray(allQuestions).slice(0, count);
+                    
                     let quizHtml = `<hr><h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Exercícios de Fixação</h3>`;
                     shuffledQuestions.forEach((q, index) => {
                         quizHtml += `<div class="quiz-block" data-question-id="${q.id}">
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 7. VALIDAÇÃO DE CPF E EVENTOS DE AUTH
+    // 7. LÓGICA DE AUTENTICAÇÃO E CPF
     // =================================================================
     function isValidCPF(cpf) {
         cpf = cpf.replace(/[^\d]+/g,'');
@@ -563,8 +563,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 8. FUNÇÕES AUXILIARES DE LÓGICA DO CURSO
+    // 8. FUNÇÕES AUXILIARES E UTILITÁRIOS (RESTAURADOS)
     // =================================================================
+    
+    // *** FUNÇÃO RESTAURADA PARA CORRIGIR O ERRO ***
+    function shuffleArray(array) {
+        let newArray = [...array]; 
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    }
+
     function setupConcludeButtonListener() {
         if (!currentModuleId) return;
         const oldB = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
@@ -791,14 +802,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     function setupProtection() {
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
           if (e.key === 'F12' || (e.ctrlKey && ['p','c','u'].includes(e.key.toLowerCase()))) e.preventDefault();
         });
     }
-
     function setupTheme() {
         const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', isDark);
