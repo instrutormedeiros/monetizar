@@ -10,27 +10,26 @@
       tailwind.config = { darkMode: 'class' }
     </script>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="style.css">
 
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" defer></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 </head>
 <body class="antialiased">
 
     <div id="print-watermark" style="display: none;"></div>
-    
     <div id="toast-container"></div>
     
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-40 opacity-0 pointer-events-none sidebar-overlay lg:hidden"></div>
     
-    <div id="off-canvas-sidebar" class="fixed top-0 left-0 h-full w-4/5 max-w-sm z-50 transform -translate-x-full transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-2xl">
+    <div id="off-canvas-sidebar" class="fixed top-0 left-0 h-full w-4/5 max-w-sm z-50 transform -translate-x-full transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-2xl border-r border-gray-200 dark:border-gray-700">
         <div class="p-0 h-full flex flex-col">
             <div class="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
                 <h2 class="text-xl font-semibold flex items-center text-blue-900 dark:text-white">
@@ -69,7 +68,7 @@
                             <span id="course-modules-count">...</span> Módulos
                         </div>
                         
-                        <button id="focus-mode-toggle" title="Modo Foco" class="text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors text-xl p-2">
+                        <button id="focus-mode-toggle" title="Modo Revisão" class="text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors text-xl p-2">
                             <i class="fas fa-book-reader"></i>
                         </button>
                         
@@ -91,7 +90,7 @@
             <div class="container mx-auto px-4 md:px-6 max-w-7xl">
                 <div class="flex justify-between items-center text-xs md:text-sm font-semibold">
                     <span class="flex-shrink-0 text-gray-700 dark:text-gray-300">Progresso: <span id="progress-text" class="text-orange-500">0%</span></span>
-                    <span class="flex-shrink-0 text-gray-500 dark:text-gray-400"><span id="completed-modules-count">0</span>/<span id="total-modules">0</span> conclúidos</span>
+                    <span class="flex-shrink-0 text-gray-500 dark:text-gray-400"><span id="completed-modules-count">0</span>/<span id="total-modules">0</span> módulos</span>
                 </div>
             </div>
             <div id="progress-bar-minimal" class="progress-bar-minimal"></div> 
@@ -121,7 +120,6 @@
                 <main>
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 min-h-[400px]">
                         <div id="content-area" class="p-6 md:p-10"></div>
-                        
                         <div id="module-nav" class="module-nav hidden flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
                             <button id="prev-module" class="action-button text-sm px-4 py-2" disabled><i class="fas fa-arrow-left mr-2"></i> Anterior</button>
                             <button id="next-module" class="action-button text-sm px-4 py-2">Próximo <i class="fas fa-arrow-right ml-2"></i></button>
@@ -133,12 +131,25 @@
 
         <footer class="bg-gray-900 text-white py-8 mt-auto">
             <div class="container mx-auto px-4 text-center">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-white">Formação Bombeiro Civil</h3>
+                        <p class="text-gray-400 text-sm">Capacitação profissional de excelência.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-white">Contato</h3>
+                        <div class="flex flex-col space-y-2 text-sm text-gray-400">
+                            <a href="#" class="hover:text-orange-500"><i class="fab fa-instagram w-5"></i> @coordenadormedeiros</a>
+                            <a href="#" class="hover:text-orange-500"><i class="fas fa-shirt w-5"></i> Artigos Militares</a>
+                        </div>
+                    </div>
+                </div>
                 <div class="border-t border-gray-700 pt-6">
                     <p class="developer-credit mb-2">Desenvolvido por Instrutor Medeiros</p>
                     <p class="text-sm text-gray-500">© 2013-2025 Curso de Formação Profissional.</p>
                     <div class="mt-4 flex justify-center space-x-4 text-xs">
-                        <button id="logout-button" class="text-yellow-500 hover:text-white transition"><i class="fas fa-sign-out-alt mr-1"></i> Sair (Logout)</button>
-                        <button id="reset-progress" class="text-red-500 hover:text-white transition"><i class="fas fa-trash-alt mr-1"></i> Resetar</button>
+                        <button id="logout-button" class="text-yellow-500 hover:text-white transition flex items-center"><i class="fas fa-sign-out-alt mr-1"></i> Sair</button>
+                        <button id="reset-progress" class="text-red-500 hover:text-white transition flex items-center"><i class="fas fa-trash-alt mr-1"></i> Resetar</button>
                     </div>
                 </div>
             </div>
@@ -176,11 +187,11 @@
             <div id="login-button-group" class="w-full mt-4 space-y-2">
                 <button id="login-button" class="action-button w-full">Entrar</button>
                 <button id="show-signup-button" class="text-sm text-blue-600 dark:text-blue-400 hover:underline w-full py-1">Criar conta (Trial 30 dias)</button>
-                <button id="toggle-payment-view" class="text-xs text-green-600 dark:text-green-400 hover:underline w-full mt-2 font-bold"><i class="fas fa-crown mr-1"></i> Quero ser Premium</button>
+                <button id="toggle-payment-view" class="text-xs text-green-600 dark:text-green-400 hover:underline w-full mt-2 font-bold flex justify-center items-center"><i class="fas fa-crown mr-1"></i> Assinar / Renovar</button>
             </div>
             
             <div id="signup-button-group" class="w-full mt-4 space-y-2 hidden">
-                <button id="signup-button" class="action-button w-full bg-green-600">Cadastrar e Iniciar</button>
+                <button id="signup-button" class="action-button w-full" style="background: var(--success);">Cadastrar e Iniciar</button>
                 <button id="show-login-button" class="text-sm text-blue-600 dark:text-blue-400 hover:underline w-full py-1">Voltar para Login</button>
             </div>
         </div>
@@ -191,12 +202,12 @@
                     <i class="fas fa-star text-3xl text-green-600 dark:text-green-400"></i>
                 </div>
                 <h3 class="text-xl font-bold text-gray-800 dark:text-white">Acesso Premium</h3>
-                <p class="text-gray-600 dark:text-gray-300 text-sm">Validade de 12 meses.</p>
+                <p class="text-gray-600 dark:text-gray-300 text-sm">Acesso completo à plataforma.</p>
             </div>
             
             <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 mb-4">
                 <div class="flex justify-between items-center mb-2">
-                    <span class="font-bold text-gray-700 dark:text-gray-200">Valor Anual:</span>
+                    <span class="font-bold text-gray-700 dark:text-gray-200">Plano Anual:</span>
                     <span class="text-xl font-bold text-green-600 dark:text-green-400">R$ 49,90</span>
                 </div>
                 <hr class="border-gray-300 dark:border-gray-600 my-2">
@@ -226,18 +237,16 @@
         <p class="text-sm mb-4 text-gray-600 dark:text-gray-300">
             Seu período de teste encerrou. Renove para continuar estudando.
         </p>
-        
         <button class="action-button w-full mb-3 text-sm" onclick="window.open('https://pay.infinitepay.io/pixmedeiros/VC1D-2Eb9WDMcOj-49,90', '_blank')">
             <i class="fas fa-external-link-alt mr-2"></i> Renovar Agora (R$ 49,90)
         </button>
-        
         <button id="logout-expired-button" class="text-xs text-red-500 hover:underline mt-2">Sair da conta</button>
     </div>
 
     <div id="reset-modal" class="modal">
          <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">Resetar Progresso?</h2>
          <div class="flex justify-center space-x-4">
-            <button id="cancel-reset-button" class="px-4 py-2 bg-gray-300 rounded">Cancelar</button>
+            <button id="cancel-reset-button" class="px-4 py-2 bg-gray-300 rounded text-black">Cancelar</button>
             <button id="confirm-reset-button" class="px-4 py-2 bg-red-600 text-white rounded">Confirmar</button>
          </div>
     </div>
@@ -249,6 +258,7 @@
         <p class="text-gray-600">Curso concluído.</p>
         <button id="close-congrats" class="action-button mt-4">Fechar</button>
     </div>
+    <div id="modal-overlay" class="modal-overlay"></div>
 
     <div id="achievement-modal" class="modal">
         <div id="ach-modal-icon-container" class="mb-4"></div>
@@ -272,9 +282,16 @@
     </nav>
     
     <div id="focus-menu-desktop" class="hidden fixed top-4 right-4 z-50 space-x-2">
-         <button id="focus-menu-modules" class="w-12 h-12 rounded-full bg-red-600 text-white shadow-lg"><i class="fas fa-list-ul"></i></button>
-         <button id="focus-menu-exit" class="w-12 h-12 rounded-full bg-gray-800 text-white shadow-lg"><i class="fas fa-times"></i></button>
+         <button id="focus-menu-modules" title="Módulos" class="w-12 h-12 rounded-full bg-red-600 text-white shadow-lg"><i class="fas fa-list-ul"></i></button>
+         <button id="focus-menu-exit" title="Sair" class="w-12 h-12 rounded-full bg-gray-800 text-white shadow-lg"><i class="fas fa-times"></i></button>
     </div>
+    
+    <nav id="focus-nav-bar" class="hidden fixed bottom-0 left-0 w-full z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex justify-around items-center h-16">
+            <button id="focus-nav-modules" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-list-ul text-xl"></i><span class="text-xs">Módulos</span></button>
+            <button id="focus-nav-exit" class="flex flex-col items-center text-red-500 w-full"><i class="fas fa-times-circle text-xl"></i><span class="text-xs">Sair</span></button>
+        </div>
+    </nav>
     
     <script src="quizzes.js" defer></script>
     <script src="data.js" defer></script>
