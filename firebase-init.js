@@ -1,9 +1,14 @@
 /* firebase-init.js
-   Funções de autenticação e verificação de acesso para o Projeto Bravo Charlie.
+   Funções de autenticação, controle de sessão e acesso.
 */
 
 (function(){
   window.FirebaseCourse = window.FirebaseCourse || {};
+
+  // Helper para gerar ID de sessão aleatório
+  function generateSessionId() {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
 
   // --- 1. INICIALIZAÇÃO ---
   window.FirebaseCourse.init = function(config){
@@ -23,35 +28,52 @@
     }
   };
 
-  // --- 2. CADASTRO (com Trial de 30 dias) ---
-  window.FirebaseCourse.signUpWithEmail = async function(name, email, password){
-    if (!window.__fbAuth || !window.__fbDB) {
-      throw new Error('Firebase não inicializado.');
-    }
+  // --- 2. CADASTRO (Com CPF e Sessão Única) ---
+  window.FirebaseCourse.signUpWithEmail = async function(name, email, password, cpf){
+    if (!window.__fbAuth || !window.__fbDB) throw new Error('Firebase não inicializado.');
 
     // 1. Cria o usuário no Authentication
     const userCred = await __fbAuth.createUserWithEmailAndPassword(email, password);
     const uid = userCred.user.uid;
     
-    // 2. Define a data de expiração (30 dias a partir de agora)
+    // 2. Gera expiração e Sessão ID
     const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    const newSessionId = generateSessionId();
 
-    // 3. Cria o documento no Firestore
+    // 3. Salva no Firestore
     await __fbDB.collection('users').doc(uid).set({
       name: name,
       email: email,
-      status: 'trial', // 'trial', 'paid', 'expired'
-      acesso_ate: trialEndDate.toISOString() // Salva como string
+      cpf: cpf, // Salva o CPF
+      status: 'trial',
+      acesso_ate: trialEndDate.toISOString(),
+      session_id: newSessionId // Segurança anti-empréstimo
     });
     
-    console.log(`Usuário ${uid} criado com trial até ${trialEndDate.toLocaleDateString()}.`);
-    return { uid, acesso_ate: trialEndDate.toISOString() };
+    // Salva sessão localmente
+    localStorage.setItem('current_session_id', newSessionId);
+    
+    console.log(`Usuário ${uid} criado com trial.`);
+    return { uid };
   };
 
-  // --- 3. LOGIN ---
+  // --- 3. LOGIN (Com Sessão Única) ---
   window.FirebaseCourse.signInWithEmail = async function(email, password){
     if (!window.__fbAuth) throw new Error('Firebase não inicializado.');
+    
+    // 1. Autentica
     const userCred = await __fbAuth.signInWithEmailAndPassword(email, password);
+    const uid = userCred.user.uid;
+
+    // 2. Gera NOVA sessão e atualiza no banco (Derruba outros logins)
+    const newSessionId = generateSessionId();
+    await __fbDB.collection('users').doc(uid).update({
+        session_id: newSessionId
+    });
+
+    // 3. Salva sessão localmente
+    localStorage.setItem('current_session_id', newSessionId);
+
     return userCred.user;
   };
 
@@ -69,17 +91,14 @@
   window.FirebaseCourse.signOutUser = async function() {
     if (!window.__fbAuth) return;
     await __fbAuth.signOut();
+    localStorage.removeItem('current_session_id');
     console.log("Usuário deslogado.");
-    window.location.reload(); // Recarrega a página para mostrar o login
+    window.location.reload(); 
   };
 
-  // --- 6. O "PORTÃO" DE VERIFICAÇÃO (Função Principal) ---
-  // Verifica a sessão (login persistente) e validade do acesso
+  // --- 6. CHECK AUTH (Valida Acesso e Sessão Única) ---
   window.FirebaseCourse.checkAuth = function(onLoginSuccess) {
-    if (!window.__fbAuth) {
-        console.error("Auth não iniciado. Chamando checkAuth cedo demais.");
-        return;
-    }
+    if (!window.__fbAuth) return;
     
     const loginModal = document.getElementById('name-prompt-modal');
     const loginOverlay = document.getElementById('name-modal-overlay');
@@ -87,37 +106,42 @@
 
     __fbAuth.onAuthStateChanged(async (user) => {
       if (user) {
-        // --- USUÁRIO ESTÁ LOGADO ---
-        console.log("Usuário logado:", user.uid);
         try {
           const userData = await FirebaseCourse.getUserDoc(user.uid);
           
-          // Converte a string 'acesso_ate' do Firestore em Data
+          // VERIFICAÇÃO DE SEGURANÇA (Sessão Única)
+          const localSession = localStorage.getItem('current_session_id');
+          // Se a sessão do banco for diferente da local, alguém logou em outro lugar
+          if (userData.session_id && localSession && userData.session_id !== localSession) {
+              alert("Sua conta foi acessada em outro dispositivo. Você foi desconectado.");
+              await FirebaseCourse.signOutUser();
+              return;
+          }
+          
+          // Se não tinha sessão local (ex: limpou cache), sincroniza
+          if (!localSession) {
+              localStorage.setItem('current_session_id', userData.session_id);
+          }
+
+          // VERIFICAÇÃO DE VALIDADE
           const acessoAte = new Date(userData.acesso_ate);
           const hoje = new Date();
 
           if (acessoAte > hoje) {
-            // --- ACESSO VÁLIDO ---
-            console.log("Acesso válido até:", acessoAte.toLocaleDateString());
-            // Chama a função (de app.js) para iniciar o curso
             onLoginSuccess(user, userData);
-            
           } else {
-            // --- ACESSO EXPIRADO ---
-            console.warn("Acesso expirado em:", acessoAte.toLocaleDateString());
+            console.warn("Acesso expirado.");
             if(expiredModal) expiredModal.classList.add('show');
             if(loginOverlay) loginOverlay.classList.add('show');
+            // Se expirado, não fecha o modal de login nem inicia o app
           }
           
         } catch (error) {
-          console.error("Erro ao buscar dados do usuário:", error);
-          alert(`Erro: ${error.message}. Faça login novamente.`);
-          await FirebaseCourse.signOutUser(); // Desloga se houver erro
+          console.error("Erro de verificação:", error);
+          await FirebaseCourse.signOutUser();
         }
         
       } else {
-        // --- USUÁRIO ESTÁ DESLOGADO ---
-        console.log("Nenhum usuário logado. Mostrando modal de login.");
         if(loginModal) loginModal.classList.add('show');
         if(loginOverlay) loginOverlay.classList.add('show');
       }
