@@ -1,16 +1,13 @@
-/* === ARQUIVO app.js (COM CPF, PAGAMENTO E SESSÃO ÚNICA) === */
+/* === ARQUIVO app_final.js (CORREÇÃO FINAL - BOTÕES E CPF) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- VERIFICAÇÃO DE SEGURANÇA ---
     if (typeof moduleContent === 'undefined' || typeof moduleCategories === 'undefined' || typeof questionSources === 'undefined') {
-        const contentAreaError = document.getElementById('content-area');
-        if (contentAreaError) {
-            contentAreaError.innerHTML = `<div class="text-center py-10"><h2>Erro Crítico</h2><button onclick="location.reload()">Recarregar</button></div>`;
-            contentAreaError.closest('.bg-white')?.classList.remove('hidden');
-            document.getElementById('loading-spinner')?.classList.add('hidden');
-        }
-        return; 
+        console.error("Arquivos de dados ausentes.");
+        const errDiv = document.getElementById('content-area');
+        if(errDiv) errDiv.innerHTML = "<div class='text-center py-10'><h2>Erro Crítico: Dados não carregados.</h2><button onclick='location.reload()'>Recarregar</button></div>";
+        return;
     }
 
     // --- VARIÁVEIS GLOBAIS ---
@@ -20,21 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let notifiedAchievements = JSON.parse(localStorage.getItem('gateBombeiroNotifiedAchievements_v3')) || [];
     let currentModuleId = null;
     let cachedQuestionBanks = {}; 
-
-    // --- SELETORES ---
-    const toastContainer = document.getElementById('toast-container');
-    const sidebar = document.getElementById('off-canvas-sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const printWatermark = document.getElementById('print-watermark');
-    const achievementModal = document.getElementById('achievement-modal');
-    const achievementOverlay = document.getElementById('achievement-modal-overlay');
-    const closeAchButton = document.getElementById('close-ach-modal');
-    const breadcrumbContainer = document.getElementById('breadcrumb-container');
-    const loadingSpinner = document.getElementById('loading-spinner');
-    const resetModal = document.getElementById('reset-modal');
-    const resetOverlay = document.getElementById('reset-modal-overlay');
-    const confirmResetButton = document.getElementById('confirm-reset-button');
-    const cancelResetButton = document.getElementById('cancel-reset-button');
 
     // --- INIT ---
     function init() {
@@ -52,69 +34,53 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (typeof FirebaseCourse !== 'undefined') {
              FirebaseCourse.init(firebaseConfig);
-             
              setupAuthEventListeners(); 
              
-             document.getElementById('logout-button')?.addEventListener('click', FirebaseCourse.signOutUser);
-             document.getElementById('logout-expired-button')?.addEventListener('click', FirebaseCourse.signOutUser);
+             // Listeners de Logout
+             document.querySelectorAll('#logout-button, #logout-expired-button').forEach(btn => {
+                 btn.addEventListener('click', FirebaseCourse.signOutUser);
+             });
 
              FirebaseCourse.checkAuth((user, userData) => {
                 onLoginSuccess(user, userData);
              });
-        } else {
-            alert("Erro crítico: Firebase não carregado.");
         }
         
         setupHeaderScroll();
         setupRippleEffects();
+        
+        // CORREÇÃO: Listeners de UI que não dependem de login
+        addGlobalEventListeners();
     }
     
     function onLoginSuccess(user, userData) {
-        console.log(`Iniciando app para ${userData.name}`);
-        
+        console.log(`App iniciado para ${userData.name}`);
         document.getElementById('name-prompt-modal')?.classList.remove('show');
         document.getElementById('name-modal-overlay')?.classList.remove('show');
         
         const greetingEl = document.getElementById('welcome-greeting');
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
         
-        if (printWatermark) {
-            printWatermark.textContent = `Conteúdo Exclusivo de ${userData.name} (${userData.cpf}) - Proibida a Reprodução`;
-        }
+        const watermark = document.getElementById('print-watermark');
+        if (watermark) watermark.textContent = `Conteúdo Exclusivo: ${userData.name} (${userData.cpf})`;
 
         document.getElementById('total-modules').textContent = totalModules;
         document.getElementById('course-modules-count').textContent = totalModules;
         
         populateModuleLists();
         updateProgress();
-        addEventListeners();
         handleInitialLoad();
     }
 
-    // --- VALIDAÇÃO DE CPF ---
     function isValidCPF(cpf) {
         cpf = cpf.replace(/[^\d]+/g,'');
         if(cpf == '') return false;
-        // Elimina CPFs invalidos conhecidos
-        if (cpf.length != 11 || 
-            cpf == "00000000000" || 
-            cpf == "11111111111" || 
-            cpf == "22222222222" || 
-            cpf == "33333333333" || 
-            cpf == "44444444444" || 
-            cpf == "55555555555" || 
-            cpf == "66666666666" || 
-            cpf == "77777777777" || 
-            cpf == "88888888888" || 
-            cpf == "99999999999")
-                return false;
-        // Valida 1o digito
+        if (cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
         let add = 0;
         for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
         let rev = 11 - (add % 11);
         if (rev == 10 || rev == 11) rev = 0;
         if (rev != parseInt(cpf.charAt(9))) return false;
-        // Valida 2o digito
         add = 0;
         for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
         rev = 11 - (add % 11);
@@ -124,116 +90,198 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupAuthEventListeners() {
-        const nameField = document.getElementById('name-field-container');
-        const cpfField = document.getElementById('cpf-field-container');
-        const cpfInput = document.getElementById('cpf-input');
-        
-        const nameInput = document.getElementById('name-input');
-        const emailInput = document.getElementById('email-input');
-        const passwordInput = document.getElementById('password-input');
-        const feedback = document.getElementById('auth-feedback');
-        
         const loginGroup = document.getElementById('login-button-group');
         const signupGroup = document.getElementById('signup-button-group');
+        const nameField = document.getElementById('name-field-container');
+        const cpfField = document.getElementById('cpf-field-container');
         const authTitle = document.getElementById('auth-title');
-        const authMsg = document.getElementById('auth-message');
-
+        const feedback = document.getElementById('auth-feedback');
         const authScreen = document.getElementById('auth-content-screen');
         const paymentScreen = document.getElementById('payment-content-screen');
 
-        // Máscara de CPF
-        cpfInput?.addEventListener('input', function (e) {
-            let value = e.target.value.replace(/\D/g, "");
-            value = value.replace(/(\d{3})(\d)/, "$1.$2");
-            value = value.replace(/(\d{3})(\d)/, "$1.$2");
-            value = value.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-            e.target.value = value;
+        const cpfInput = document.getElementById('cpf-input');
+        cpfInput?.addEventListener('input', e => {
+            let v = e.target.value.replace(/\D/g, "");
+            v = v.replace(/(\d{3})(\d)/, "$1.$2");
+            v = v.replace(/(\d{3})(\d)/, "$1.$2");
+            v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+            e.target.value = v;
         });
 
-        // Botões de Toggle (Login/Cadastro/Pagamento)
         document.getElementById('show-signup-button')?.addEventListener('click', () => {
-            loginGroup.classList.add('hidden');
-            signupGroup.classList.remove('hidden');
-            nameField.classList.remove('hidden');
-            cpfField.classList.remove('hidden');
-            authTitle.textContent = "Criar Nova Conta";
-            feedback.textContent = "";
+            loginGroup.classList.add('hidden'); signupGroup.classList.remove('hidden');
+            nameField.classList.remove('hidden'); cpfField.classList.remove('hidden');
+            authTitle.textContent = "Criar Nova Conta"; feedback.textContent = "";
         });
         
         document.getElementById('show-login-button')?.addEventListener('click', () => {
-            loginGroup.classList.remove('hidden');
-            signupGroup.classList.add('hidden');
-            nameField.classList.add('hidden');
-            cpfField.classList.add('hidden');
-            authTitle.textContent = "Acessar Plataforma";
-            feedback.textContent = "";
+            loginGroup.classList.remove('hidden'); signupGroup.classList.add('hidden');
+            nameField.classList.add('hidden'); cpfField.classList.add('hidden');
+            authTitle.textContent = "Acessar Plataforma"; feedback.textContent = "";
         });
 
-        // Toggle Pagamento
         document.getElementById('toggle-payment-view')?.addEventListener('click', () => {
-            authScreen.classList.add('hidden');
-            paymentScreen.classList.remove('hidden');
+            authScreen.classList.add('hidden'); paymentScreen.classList.remove('hidden');
         });
-
         document.getElementById('back-to-auth-from-payment')?.addEventListener('click', () => {
-            paymentScreen.classList.add('hidden');
-            authScreen.classList.remove('hidden');
+            paymentScreen.classList.add('hidden'); authScreen.classList.remove('hidden');
         });
         
-        // Ação de LOGIN
         document.getElementById('login-button')?.addEventListener('click', async () => {
-            const email = emailInput.value;
-            const password = passwordInput.value;
-            if (!email || !password) {
-                feedback.textContent = "Preencha e-mail e senha.";
-                return;
-            }
+            const email = document.getElementById('email-input').value;
+            const pass = document.getElementById('password-input').value;
+            if (!email || !pass) return feedback.textContent = "Preencha todos os campos.";
             feedback.textContent = "Entrando...";
             try {
-                await FirebaseCourse.signInWithEmail(email, password);
+                await FirebaseCourse.signInWithEmail(email, pass);
                 feedback.textContent = "Sucesso! Carregando...";
-            } catch (error) {
-                console.error(error);
-                feedback.textContent = "Erro no login. Verifique os dados.";
+            } catch (e) {
+                console.error(e);
+                feedback.textContent = "E-mail ou senha incorretos.";
             }
         });
         
-        // Ação de CADASTRO
         document.getElementById('signup-button')?.addEventListener('click', async () => {
-            const name = nameInput.value;
-            const cpf = cpfInput.value;
-            const email = emailInput.value;
-            const password = passwordInput.value;
+            const name = document.getElementById('name-input').value;
+            const cpf = document.getElementById('cpf-input').value;
+            const email = document.getElementById('email-input').value;
+            const pass = document.getElementById('password-input').value;
             
-            if (!name || !cpf || !email || !password) {
-                feedback.textContent = "Preencha todos os campos.";
-                return;
-            }
-            if (!isValidCPF(cpf)) {
-                feedback.textContent = "CPF Inválido.";
-                return;
-            }
+            if (!name || !cpf || !email || !pass) return feedback.textContent = "Preencha todos os campos.";
+            if (!isValidCPF(cpf)) return feedback.textContent = "CPF Inválido.";
             
             feedback.textContent = "Criando conta...";
             try {
-                // Agora passamos o CPF também
-                await FirebaseCourse.signUpWithEmail(name, email, password, cpf);
-                feedback.textContent = "Conta criada!";
-            } catch (error) {
-                console.error(error);
-                if (error.code === 'auth/email-already-in-use') {
-                    feedback.textContent = "E-mail já cadastrado.";
-                } else {
-                    feedback.textContent = "Erro ao criar conta.";
+                await FirebaseCourse.signUpWithEmail(name, email, pass, cpf);
+                feedback.textContent = "Conta criada com sucesso!";
+            } catch (e) {
+                console.error(e);
+                if (e.message === 'CPF_ALREADY_IN_USE') feedback.textContent = "Este CPF já está cadastrado.";
+                else if (e.code === 'auth/email-already-in-use') feedback.textContent = "E-mail já em uso.";
+                else feedback.textContent = "Erro ao criar conta.";
+            }
+        });
+    }
+
+    // --- FUNÇÃO CENTRAL DE EVENTOS UI (CORRIGIDA) ---
+    function addGlobalEventListeners() {
+        // Navegação de Módulos
+        document.body.addEventListener('click', e => {
+            const item = e.target.closest('.module-list-item');
+            if (item) {
+                loadModuleContent(item.dataset.module);
+                // Se estiver no mobile, fecha a sidebar ao clicar
+                if (window.innerWidth < 1024) closeSidebar();
+            }
+            
+            // Accordion
+            const accBtn = e.target.closest('.accordion-button');
+            if (accBtn) {
+                const p = accBtn.nextElementSibling;
+                const isActive = accBtn.classList.contains('active');
+                // Fecha outros painéis do mesmo container
+                const container = accBtn.closest('.module-accordion-container');
+                if(container) {
+                    container.querySelectorAll('.accordion-panel').forEach(panel => {
+                        if(panel !== p) { panel.style.maxHeight = null; panel.previousElementSibling.classList.remove('active'); }
+                    });
+                }
+                if (!isActive) { accBtn.classList.add('active'); p.style.maxHeight = p.scrollHeight + "px"; }
+                else { accBtn.classList.remove('active'); p.style.maxHeight = null; }
+            }
+        });
+
+        // Botões de Navegação (Anterior/Próximo)
+        document.getElementById('prev-module')?.addEventListener('click', () => {
+            const n = parseInt(currentModuleId.replace('module',''));
+            if(n > 1) loadModuleContent(`module${n-1}`);
+        });
+        document.getElementById('next-module')?.addEventListener('click', () => {
+            const n = parseInt(currentModuleId.replace('module',''));
+            if(n < totalModules) loadModuleContent(`module${n+1}`);
+        });
+        
+        // SIDEBAR TOGGLES (CORRIGIDO)
+        const toggleSidebar = () => {
+            const sb = document.getElementById('off-canvas-sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
+        };
+
+        // Múltiplos botões podem abrir a sidebar
+        document.querySelectorAll('#mobile-menu-button, #bottom-nav-modules, #focus-menu-modules, #focus-nav-modules').forEach(btn => {
+            btn.addEventListener('click', toggleSidebar);
+        });
+
+        // Botões para fechar sidebar
+        document.getElementById('close-sidebar-button')?.addEventListener('click', closeSidebar);
+        document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
+        
+        // HOME
+        const goHome = () => goToHomePage();
+        document.querySelectorAll('#home-button-desktop, #bottom-nav-home, #home-breadcrumb').forEach(btn => {
+            btn.addEventListener('click', goHome);
+        });
+        
+        // TEMA
+        document.querySelectorAll('#bottom-nav-theme, #dark-mode-toggle-desktop').forEach(btn => {
+            btn.addEventListener('click', toggleTheme);
+        });
+        
+        // MODO FOCO (CORRIGIDO)
+        const toggleFocus = () => {
+            document.body.classList.toggle('focus-mode');
+            if (!document.body.classList.contains('focus-mode')) closeSidebar();
+        };
+        document.querySelectorAll('#focus-mode-toggle, #bottom-nav-focus, #focus-menu-exit, #focus-nav-exit').forEach(btn => {
+            btn.addEventListener('click', toggleFocus);
+        });
+
+        // MODAIS
+        document.getElementById('close-congrats')?.addEventListener('click', () => {
+            document.getElementById('congratulations-modal').classList.remove('show');
+            document.getElementById('modal-overlay').classList.remove('show');
+        });
+        document.getElementById('close-ach-modal')?.addEventListener('click', () => {
+            document.getElementById('achievement-modal').classList.remove('show');
+            document.getElementById('achievement-modal-overlay').classList.remove('show');
+        });
+
+        // RESET
+        const showReset = () => {
+             document.getElementById('reset-modal').classList.add('show');
+             document.getElementById('reset-modal-overlay').classList.add('show');
+        };
+        document.getElementById('reset-progress')?.addEventListener('click', showReset);
+        document.getElementById('cancel-reset-button')?.addEventListener('click', () => {
+            document.getElementById('reset-modal').classList.remove('show');
+            document.getElementById('reset-modal-overlay').classList.remove('show');
+        });
+        document.getElementById('confirm-reset-button')?.addEventListener('click', () => {
+            localStorage.removeItem('gateBombeiroCompletedModules_v3');
+            localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
+            alert('Progresso local resetado.');
+            window.location.reload();
+        });
+        
+        // Busca
+        document.body.addEventListener('input', e => {
+            if(e.target.matches('.module-search')) {
+                const s = e.target.value.toLowerCase();
+                const container = e.target.closest('.p-4'); // Ajuste para pegar o container correto
+                if(container) {
+                    container.querySelectorAll('.module-list-item').forEach(i => {
+                        i.style.display = i.textContent.toLowerCase().includes(s) ? 'flex' : 'none';
+                    });
                 }
             }
         });
     }
 
-    // --- RESTANTE DAS FUNÇÕES (Inalteradas, apenas mantidas) ---
+    // --- FUNÇÕES AUXILIARES ---
     function handleInitialLoad() {
         const lastModule = localStorage.getItem('gateBombeiroLastModule');
-        if (lastModule) { loadModuleContent(lastModule); } else { goToHomePage(); }
+        if (lastModule) loadModuleContent(lastModule); else goToHomePage();
     }
 
     async function loadQuestionBank(moduleId) {
@@ -306,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
             updateNavigationButtons();
             updateBreadcrumbs(d.title);
             document.getElementById('module-nav').classList.remove('hidden');
-            closeSidebar();
             document.getElementById('next-module')?.classList.remove('blinking-button');
         }, 300);
     }
@@ -356,7 +403,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 breadcrumbContainer.innerHTML = `${homeLink} <span class="mx-2">/</span> ${moduleTitle}`;
             }
         }
-        document.getElementById('home-breadcrumb')?.addEventListener('click', (e) => { e.preventDefault(); goToHomePage(); });
     }
     
     function setupNotesListener(id) {
@@ -370,34 +416,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function goToHomePage() {
         localStorage.removeItem('gateBombeiroLastModule'); 
-        if (contentArea) contentArea.innerHTML = getWelcomeContent();
+        if (contentArea) contentArea.innerHTML = `<div class="text-center py-8"><div class="floating inline-block p-5 bg-red-100 dark:bg-red-900/50 rounded-full mb-6"><i class="fas fa-fire-extinguisher text-6xl text-red-600"></i></div><h2 class="text-4xl font-bold mb-4 text-blue-900 dark:text-white">Torne-se um Profissional de Elite</h2><p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">Bem-vindo ao <strong class="font-bold text-orange-500 dark:text-orange-400">Curso de Formação para Bombeiro Civil e Brigadista</strong>.</p><button id="start-course" class="action-button pulse text-lg"><i class="fas fa-play-circle mr-2"></i> Iniciar Curso Agora</button></div>`;
+        
         document.getElementById('module-nav')?.classList.add('hidden');
         document.querySelectorAll('.module-list-item.active').forEach(i => i.classList.remove('active'));
         currentModuleId = null;
         closeSidebar();
         updateBreadcrumbs();
-        const btn = document.getElementById('start-course');
-        if (btn) {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.addEventListener('click', () => {
-                loadModuleContent('module1');
-                const firstBtn = document.querySelector('#desktop-module-container .accordion-button');
-                if(firstBtn) {
-                     firstBtn.classList.add('active');
-                     if(firstBtn.nextElementSibling) firstBtn.nextElementSibling.style.maxHeight = firstBtn.nextElementSibling.scrollHeight + "px";
-                }
-            });
-        }
-    }
-
-    function getWelcomeContent() {
-        return `<div class="text-center py-8">
-                        <div class="floating inline-block p-5 bg-red-100 dark:bg-red-900/50 rounded-full mb-6"><i class="fas fa-fire-extinguisher text-6xl text-red-600"></i></div>
-                        <h2 class="text-4xl font-bold mb-4 text-blue-900 dark:text-white">Torne-se um Profissional de Elite</h2>
-                        <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">Bem-vindo ao <strong class="font-bold text-orange-500 dark:text-orange-400">Curso de Formação para Bombeiro Civil e Brigadista</strong>.</p>
-                        <button id="start-course" class="action-button pulse text-lg"><i class="fas fa-play-circle mr-2"></i> Iniciar Curso Agora</button>
-                    </div>`;
+        
+        // Re-attach start button listener
+        document.getElementById('start-course')?.addEventListener('click', () => {
+            loadModuleContent('module1');
+            const firstBtn = document.querySelector('#desktop-module-container .accordion-button');
+            if(firstBtn) {
+                 firstBtn.classList.add('active');
+                 if(firstBtn.nextElementSibling) firstBtn.nextElementSibling.style.maxHeight = firstBtn.nextElementSibling.scrollHeight + "px";
+            }
+        });
     }
 
     function setupProtection() {
@@ -517,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 notifiedAchievements.push(key);
                 newNotification = true;
             }
+            document.querySelectorAll(`#ach-cat-${key}`).forEach(el => el.classList.toggle('unlocked', allComplete));
         }
         if (newNotification) localStorage.setItem('gateBombeiroNotifiedAchievements_v3', JSON.stringify(notifiedAchievements));
     }
@@ -535,18 +571,12 @@ document.addEventListener('DOMContentLoaded', () => {
         achievementOverlay?.classList.remove('show');
     }
 
-    function toggleFocusMode() {
-        document.body.classList.toggle('focus-mode');
-        if (!document.body.classList.contains('focus-mode')) closeSidebar();
-    }
-
     function setupConcludeButtonListener() {
         if (!currentModuleId) return;
         const b = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
         if(b) {
-            b.replaceWith(b.cloneNode(true)); // Remove listeners antigos
+            b.replaceWith(b.cloneNode(true));
             const newB = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
-            
             if(completedModules.includes(currentModuleId)){
                 newB.disabled=true;
                 newB.innerHTML='<i class="fas fa-check-circle mr-2"></i> Concluído';
@@ -582,84 +612,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     function setupQuizListeners() {
         document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
-    }
-
-    function addEventListeners() {
-        const next = document.getElementById('next-module');
-        const prev = document.getElementById('prev-module');
-        
-        document.body.addEventListener('click', e => {
-            const item = e.target.closest('.module-list-item');
-            if (item) loadModuleContent(item.dataset.module);
-            
-            const accBtn = e.target.closest('.accordion-button');
-            if (accBtn) {
-                const p = accBtn.nextElementSibling;
-                const isActive = accBtn.classList.contains('active');
-                document.querySelectorAll('.accordion-panel').forEach(panel => {
-                    if(panel !== p) { panel.style.maxHeight = null; panel.previousElementSibling.classList.remove('active'); }
-                });
-                if (!isActive) { accBtn.classList.add('active'); p.style.maxHeight = p.scrollHeight + "px"; }
-                else { accBtn.classList.remove('active'); p.style.maxHeight = null; }
-            }
-        });
-        
-        prev?.addEventListener('click', () => {
-            const n = parseInt(currentModuleId.replace('module',''));
-            if(n > 1) loadModuleContent(`module${n-1}`);
-        });
-        next?.addEventListener('click', () => {
-            const n = parseInt(currentModuleId.replace('module',''));
-            if(n < totalModules) loadModuleContent(`module${n+1}`);
-        });
-        
-        document.getElementById('mobile-menu-button')?.addEventListener('click', openSidebar);
-        document.getElementById('close-sidebar-button')?.addEventListener('click', closeSidebar);
-        sidebarOverlay?.addEventListener('click', closeSidebar);
-        
-        document.getElementById('home-button-desktop')?.addEventListener('click', goToHomePage);
-        document.getElementById('bottom-nav-home')?.addEventListener('click', goToHomePage);
-        
-        document.getElementById('bottom-nav-modules')?.addEventListener('click', openSidebar);
-        document.getElementById('bottom-nav-theme')?.addEventListener('click', toggleTheme);
-        document.getElementById('dark-mode-toggle-desktop')?.addEventListener('click', toggleTheme);
-        
-        document.getElementById('focus-mode-toggle')?.addEventListener('click', toggleFocusMode);
-        document.getElementById('bottom-nav-focus')?.addEventListener('click', toggleFocusMode);
-
-        document.getElementById('close-congrats')?.addEventListener('click', () => {
-            document.getElementById('congratulations-modal').classList.remove('show');
-            document.getElementById('modal-overlay').classList.remove('show');
-        });
-        
-        closeAchButton?.addEventListener('click', hideAchievementModal);
-
-        document.getElementById('reset-progress')?.addEventListener('click', () => {
-             resetModal?.classList.add('show');
-             resetOverlay?.classList.add('show');
-        });
-        
-        cancelResetButton?.addEventListener('click', () => {
-            resetModal?.classList.remove('show');
-            resetOverlay?.classList.remove('show');
-        });
-
-        confirmResetButton?.addEventListener('click', () => {
-            localStorage.removeItem('gateBombeiroCompletedModules_v3');
-            localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
-            Object.keys(localStorage).forEach(k => { if (k.startsWith('note-')) localStorage.removeItem(k); });
-            alert('Progresso local resetado.');
-            window.location.reload();
-        });
-        
-        const backToTop = document.getElementById('back-to-top');
-        if (backToTop) {
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 300) { backToTop.style.display = 'flex'; setTimeout(() => { backToTop.style.opacity = '1'; backToTop.style.transform = 'translateY(0)'; }, 10); }
-                else { backToTop.style.opacity = '0'; backToTop.style.transform = 'translateY(20px)'; setTimeout(() => { backToTop.style.display = 'none'; }, 300); }
-            });
-            backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-        }
     }
 
     function triggerSuccessParticles(e, el) {
