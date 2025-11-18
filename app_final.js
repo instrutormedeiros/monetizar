@@ -71,13 +71,14 @@ function init() {
     // --- INICIALIZAÇÃO DO FIREBASE ---
     // !! IMPORTANTE !! Cole sua configuração do Firebase aqui
     const firebaseConfig = {
-      apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
-      authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
-      projectId: "projeto-bravo-charlie-app",
-      storageBucket: "projeto-bravo-charlie-app.firebasestorage.app",
-      messagingSenderId: "26745008470",
-      appId: "1:26745008470:web:5f25965524c646b3e666f7"
-    };
+  apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
+  authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
+  projectId: "projeto-bravo-charlie-app",
+  storageBucket: "projeto-bravo-charlie-app.firebasestorage.app",
+  messagingSenderId: "26745008470",
+  appId: "1:26745008470:web:5f25965524c646b3e666f7",
+  measurementId: "G-Y7VZFQ0D9F"
+};
     
     // Verifica se o Firebase foi carregado
     if (typeof FirebaseCourse === 'undefined') {
