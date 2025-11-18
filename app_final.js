@@ -1,16 +1,25 @@
-/* === ARQUIVO app_final.js (CORREÇÃO FINAL - BOTÕES E CPF) === */
+/* === ARQUIVO app_final.js (CÉREBRO: CPF, PAGAMENTO E UI) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- VERIFICAÇÃO DE SEGURANÇA ---
+    // --- 1. VERIFICAÇÃO DE SEGURANÇA (Evita tela branca se dados falharem) ---
     if (typeof moduleContent === 'undefined' || typeof moduleCategories === 'undefined' || typeof questionSources === 'undefined') {
-        console.error("Arquivos de dados ausentes.");
-        const errDiv = document.getElementById('content-area');
-        if(errDiv) errDiv.innerHTML = "<div class='text-center py-10'><h2>Erro Crítico: Dados não carregados.</h2><button onclick='location.reload()'>Recarregar</button></div>";
+        const contentAreaError = document.getElementById('content-area');
+        if (contentAreaError) {
+            contentAreaError.innerHTML = `
+                <div class="text-center py-10 px-6">
+                    <h2 class="text-2xl font-bold text-red-600 mb-4">Erro de Carregamento</h2>
+                    <p class="text-gray-600 mb-4">Os arquivos de dados do curso não foram encontrados.</p>
+                    <button onclick="location.reload()" class="action-button">Tentar Novamente</button>
+                </div>`;
+            contentAreaError.closest('.bg-white')?.classList.remove('hidden');
+            document.getElementById('loading-spinner')?.classList.add('hidden');
+        }
+        console.error("Arquivos de dados (data.js/course.js) ausentes.");
         return;
     }
 
-    // --- VARIÁVEIS GLOBAIS ---
+    // --- 2. VARIÁVEIS GLOBAIS ---
     const contentArea = document.getElementById('content-area');
     const totalModules = Object.keys(moduleContent).length;
     let completedModules = JSON.parse(localStorage.getItem('gateBombeiroCompletedModules_v3')) || [];
@@ -18,11 +27,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModuleId = null;
     let cachedQuestionBanks = {}; 
 
-    // --- INIT ---
+    // --- 3. FUNÇÃO DE INICIALIZAÇÃO ---
     function init() {
         setupProtection();
         setupTheme();
         
+        // Configuração do Firebase (SUA CONTA)
         const firebaseConfig = {
           apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
           authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
@@ -34,71 +44,99 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (typeof FirebaseCourse !== 'undefined') {
              FirebaseCourse.init(firebaseConfig);
+             
+             // Configura a lógica de Login, Cadastro, CPF e Pagamento
              setupAuthEventListeners(); 
              
-             // Listeners de Logout
+             // Configura os botões de Sair
              document.querySelectorAll('#logout-button, #logout-expired-button').forEach(btn => {
                  btn.addEventListener('click', FirebaseCourse.signOutUser);
              });
 
+             // Inicia a verificação de acesso
              FirebaseCourse.checkAuth((user, userData) => {
                 onLoginSuccess(user, userData);
              });
+        } else {
+            alert("Erro crítico: Sistema de login não carregado.");
         }
         
+        // Inicia efeitos visuais que não dependem de login
         setupHeaderScroll();
         setupRippleEffects();
-        
-        // CORREÇÃO: Listeners de UI que não dependem de login
-        addGlobalEventListeners();
+        addGlobalEventListeners(); // Navegação, Sidebar, etc.
     }
     
+    // --- 4. SUCESSO NO LOGIN ---
     function onLoginSuccess(user, userData) {
-        console.log(`App iniciado para ${userData.name}`);
+        console.log(`App liberado para: ${userData.name}`);
+        
+        // Esconde modais de bloqueio
         document.getElementById('name-prompt-modal')?.classList.remove('show');
         document.getElementById('name-modal-overlay')?.classList.remove('show');
         
+        // Personaliza a interface
         const greetingEl = document.getElementById('welcome-greeting');
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
         
+        // Marca d'água com Nome e CPF (Segurança)
         const watermark = document.getElementById('print-watermark');
-        if (watermark) watermark.textContent = `Conteúdo Exclusivo: ${userData.name} (${userData.cpf})`;
+        if (watermark) {
+            watermark.textContent = `Licenciado para: ${userData.name} - CPF: ${userData.cpf}`;
+        }
 
-        document.getElementById('total-modules').textContent = totalModules;
-        document.getElementById('course-modules-count').textContent = totalModules;
+        // Atualiza contadores
+        const totalEl = document.getElementById('total-modules');
+        const courseEl = document.getElementById('course-modules-count');
+        if(totalEl) totalEl.textContent = totalModules;
+        if(courseEl) courseEl.textContent = totalModules;
         
+        // Carrega o conteúdo
         populateModuleLists();
         updateProgress();
         handleInitialLoad();
     }
 
+    // --- 5. VALIDAÇÃO MATEMÁTICA DE CPF ---
     function isValidCPF(cpf) {
         cpf = cpf.replace(/[^\d]+/g,'');
         if(cpf == '') return false;
+        // Elimina CPFs invalidos conhecidos
         if (cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+        
+        // Valida 1o digito
         let add = 0;
         for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
         let rev = 11 - (add % 11);
         if (rev == 10 || rev == 11) rev = 0;
         if (rev != parseInt(cpf.charAt(9))) return false;
+        
+        // Valida 2o digito
         add = 0;
         for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
         rev = 11 - (add % 11);
         if (rev == 10 || rev == 11) rev = 0;
         if (rev != parseInt(cpf.charAt(10))) return false;
+        
         return true;
     }
 
+    // --- 6. GERENCIADOR DE EVENTOS DE AUTH (Login/Cadastro/Pagamento) ---
     function setupAuthEventListeners() {
+        // Elementos
         const loginGroup = document.getElementById('login-button-group');
         const signupGroup = document.getElementById('signup-button-group');
         const nameField = document.getElementById('name-field-container');
         const cpfField = document.getElementById('cpf-field-container');
         const authTitle = document.getElementById('auth-title');
+        const authMsg = document.getElementById('auth-message');
         const feedback = document.getElementById('auth-feedback');
+        
+        // Telas (Auth vs Pagamento)
         const authScreen = document.getElementById('auth-content-screen');
         const paymentScreen = document.getElementById('payment-content-screen');
 
+        // Máscara de CPF (enquanto digita)
         const cpfInput = document.getElementById('cpf-input');
         cpfInput?.addEventListener('input', e => {
             let v = e.target.value.replace(/\D/g, "");
@@ -108,73 +146,108 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.value = v;
         });
 
+        // Alternar para CADASTRO
         document.getElementById('show-signup-button')?.addEventListener('click', () => {
-            loginGroup.classList.add('hidden'); signupGroup.classList.remove('hidden');
-            nameField.classList.remove('hidden'); cpfField.classList.remove('hidden');
-            authTitle.textContent = "Criar Nova Conta"; feedback.textContent = "";
+            loginGroup.classList.add('hidden');
+            signupGroup.classList.remove('hidden');
+            nameField.classList.remove('hidden');
+            cpfField.classList.remove('hidden');
+            authTitle.textContent = "Criar Nova Conta";
+            authMsg.textContent = "Preencha seus dados para iniciar.";
+            feedback.textContent = "";
         });
         
+        // Alternar para LOGIN
         document.getElementById('show-login-button')?.addEventListener('click', () => {
-            loginGroup.classList.remove('hidden'); signupGroup.classList.add('hidden');
-            nameField.classList.add('hidden'); cpfField.classList.add('hidden');
-            authTitle.textContent = "Acessar Plataforma"; feedback.textContent = "";
+            loginGroup.classList.remove('hidden');
+            signupGroup.classList.add('hidden');
+            nameField.classList.add('hidden');
+            cpfField.classList.add('hidden');
+            authTitle.textContent = "Acessar Plataforma";
+            authMsg.textContent = "Entre com seu e-mail e senha.";
+            feedback.textContent = "";
         });
 
+        // Alternar para PAGAMENTO
         document.getElementById('toggle-payment-view')?.addEventListener('click', () => {
-            authScreen.classList.add('hidden'); paymentScreen.classList.remove('hidden');
+            authScreen.classList.add('hidden');
+            paymentScreen.classList.remove('hidden');
         });
+
+        // Voltar do Pagamento
         document.getElementById('back-to-auth-from-payment')?.addEventListener('click', () => {
-            paymentScreen.classList.add('hidden'); authScreen.classList.remove('hidden');
+            paymentScreen.classList.add('hidden');
+            authScreen.classList.remove('hidden');
         });
         
+        // Botão ENTRAR
         document.getElementById('login-button')?.addEventListener('click', async () => {
             const email = document.getElementById('email-input').value;
             const pass = document.getElementById('password-input').value;
-            if (!email || !pass) return feedback.textContent = "Preencha todos os campos.";
-            feedback.textContent = "Entrando...";
+            
+            if (!email || !pass) return feedback.textContent = "Preencha e-mail e senha.";
+            
+            feedback.textContent = "Verificando...";
+            feedback.className = "text-xs mt-3 font-bold text-blue-600"; // Muda cor para azul temporariamente
+
             try {
                 await FirebaseCourse.signInWithEmail(email, pass);
                 feedback.textContent = "Sucesso! Carregando...";
+                feedback.className = "text-xs mt-3 font-bold text-green-600";
             } catch (e) {
                 console.error(e);
-                feedback.textContent = "E-mail ou senha incorretos.";
+                feedback.className = "text-xs mt-3 font-bold text-red-600";
+                if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password') {
+                    feedback.textContent = "E-mail ou senha incorretos.";
+                } else {
+                    feedback.textContent = "Erro ao entrar. Tente novamente.";
+                }
             }
         });
         
+        // Botão CADASTRAR
         document.getElementById('signup-button')?.addEventListener('click', async () => {
             const name = document.getElementById('name-input').value;
             const cpf = document.getElementById('cpf-input').value;
             const email = document.getElementById('email-input').value;
             const pass = document.getElementById('password-input').value;
             
+            feedback.className = "text-xs mt-3 font-bold text-red-600";
+
             if (!name || !cpf || !email || !pass) return feedback.textContent = "Preencha todos os campos.";
-            if (!isValidCPF(cpf)) return feedback.textContent = "CPF Inválido.";
+            if (pass.length < 6) return feedback.textContent = "A senha deve ter no mínimo 6 caracteres.";
+            if (!isValidCPF(cpf)) return feedback.textContent = "CPF Inválido. Verifique os números.";
             
             feedback.textContent = "Criando conta...";
+            feedback.className = "text-xs mt-3 font-bold text-blue-600";
+
             try {
+                // Envia CPF junto com os dados
                 await FirebaseCourse.signUpWithEmail(name, email, pass, cpf);
-                feedback.textContent = "Conta criada com sucesso!";
+                feedback.textContent = "Conta criada! Acessando...";
+                feedback.className = "text-xs mt-3 font-bold text-green-600";
             } catch (e) {
                 console.error(e);
-                if (e.message === 'CPF_ALREADY_IN_USE') feedback.textContent = "Este CPF já está cadastrado.";
-                else if (e.code === 'auth/email-already-in-use') feedback.textContent = "E-mail já em uso.";
-                else feedback.textContent = "Erro ao criar conta.";
+                feedback.className = "text-xs mt-3 font-bold text-red-600";
+                if (e.message === 'CPF_ALREADY_IN_USE') feedback.textContent = "Este CPF já possui cadastro.";
+                else if (e.code === 'auth/email-already-in-use') feedback.textContent = "Este e-mail já está em uso.";
+                else feedback.textContent = "Erro ao criar conta. Tente novamente.";
             }
         });
     }
 
-    // --- FUNÇÃO CENTRAL DE EVENTOS UI (CORRIGIDA) ---
+    // --- 7. LISTENERS GLOBAIS DE UI (Botões, Sidebar, etc.) ---
     function addGlobalEventListeners() {
-        // Navegação de Módulos
+        // Clique nos Módulos (Lista)
         document.body.addEventListener('click', e => {
             const item = e.target.closest('.module-list-item');
             if (item) {
                 loadModuleContent(item.dataset.module);
-                // Se estiver no mobile, fecha a sidebar ao clicar
+                // Fecha sidebar no mobile ao clicar
                 if (window.innerWidth < 1024) closeSidebar();
             }
             
-            // Accordion
+            // Lógica do Acordeão (Expandir/Recolher categorias)
             const accBtn = e.target.closest('.accordion-button');
             if (accBtn) {
                 const p = accBtn.nextElementSibling;
@@ -183,15 +256,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 const container = accBtn.closest('.module-accordion-container');
                 if(container) {
                     container.querySelectorAll('.accordion-panel').forEach(panel => {
-                        if(panel !== p) { panel.style.maxHeight = null; panel.previousElementSibling.classList.remove('active'); }
+                        if(panel !== p) { 
+                            panel.style.maxHeight = null; 
+                            if(panel.previousElementSibling) panel.previousElementSibling.classList.remove('active'); 
+                        }
                     });
                 }
-                if (!isActive) { accBtn.classList.add('active'); p.style.maxHeight = p.scrollHeight + "px"; }
-                else { accBtn.classList.remove('active'); p.style.maxHeight = null; }
+                // Alterna o atual
+                if (!isActive) { 
+                    accBtn.classList.add('active'); 
+                    p.style.maxHeight = p.scrollHeight + "px"; 
+                } else { 
+                    accBtn.classList.remove('active'); 
+                    p.style.maxHeight = null; 
+                }
             }
         });
 
-        // Botões de Navegação (Anterior/Próximo)
+        // Botões Anterior/Próximo
         document.getElementById('prev-module')?.addEventListener('click', () => {
             const n = parseInt(currentModuleId.replace('module',''));
             if(n > 1) loadModuleContent(`module${n-1}`);
@@ -201,43 +283,45 @@ document.addEventListener('DOMContentLoaded', () => {
             if(n < totalModules) loadModuleContent(`module${n+1}`);
         });
         
-        // SIDEBAR TOGGLES (CORRIGIDO)
+        // Sidebar (Mobile e Desktop)
         const toggleSidebar = () => {
             const sb = document.getElementById('off-canvas-sidebar');
-            const overlay = document.getElementById('sidebar-overlay');
             if (sb.classList.contains('open')) closeSidebar(); else openSidebar();
         };
 
-        // Múltiplos botões podem abrir a sidebar
-        document.querySelectorAll('#mobile-menu-button, #bottom-nav-modules, #focus-menu-modules, #focus-nav-modules').forEach(btn => {
-            btn.addEventListener('click', toggleSidebar);
+        // Todos os botões que abrem a sidebar
+        const sidebarTriggers = ['mobile-menu-button', 'bottom-nav-modules', 'focus-menu-modules', 'focus-nav-modules'];
+        sidebarTriggers.forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleSidebar);
         });
 
-        // Botões para fechar sidebar
         document.getElementById('close-sidebar-button')?.addEventListener('click', closeSidebar);
         document.getElementById('sidebar-overlay')?.addEventListener('click', closeSidebar);
         
-        // HOME
+        // Botão Home
         const goHome = () => goToHomePage();
-        document.querySelectorAll('#home-button-desktop, #bottom-nav-home, #home-breadcrumb').forEach(btn => {
-            btn.addEventListener('click', goHome);
+        const homeTriggers = ['home-button-desktop', 'bottom-nav-home', 'home-breadcrumb'];
+        homeTriggers.forEach(id => {
+            document.getElementById(id)?.addEventListener('click', goHome);
         });
         
-        // TEMA
-        document.querySelectorAll('#bottom-nav-theme, #dark-mode-toggle-desktop').forEach(btn => {
-            btn.addEventListener('click', toggleTheme);
+        // Botão Tema
+        const themeTriggers = ['bottom-nav-theme', 'dark-mode-toggle-desktop'];
+        themeTriggers.forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleTheme);
         });
         
-        // MODO FOCO (CORRIGIDO)
+        // Botão Modo Foco
         const toggleFocus = () => {
             document.body.classList.toggle('focus-mode');
             if (!document.body.classList.contains('focus-mode')) closeSidebar();
         };
-        document.querySelectorAll('#focus-mode-toggle, #bottom-nav-focus, #focus-menu-exit, #focus-nav-exit').forEach(btn => {
-            btn.addEventListener('click', toggleFocus);
+        const focusTriggers = ['focus-mode-toggle', 'bottom-nav-focus', 'focus-menu-exit', 'focus-nav-exit'];
+        focusTriggers.forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleFocus);
         });
 
-        // MODAIS
+        // Modais (Fechar)
         document.getElementById('close-congrats')?.addEventListener('click', () => {
             document.getElementById('congratulations-modal').classList.remove('show');
             document.getElementById('modal-overlay').classList.remove('show');
@@ -247,38 +331,63 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('achievement-modal-overlay').classList.remove('show');
         });
 
-        // RESET
+        // Reset Progresso
         const showReset = () => {
              document.getElementById('reset-modal').classList.add('show');
              document.getElementById('reset-modal-overlay').classList.add('show');
         };
         document.getElementById('reset-progress')?.addEventListener('click', showReset);
+        
         document.getElementById('cancel-reset-button')?.addEventListener('click', () => {
             document.getElementById('reset-modal').classList.remove('show');
             document.getElementById('reset-modal-overlay').classList.remove('show');
         });
+        
         document.getElementById('confirm-reset-button')?.addEventListener('click', () => {
             localStorage.removeItem('gateBombeiroCompletedModules_v3');
             localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
+            // Limpa notas
+            Object.keys(localStorage).forEach(k => { 
+                if (k.startsWith('note-')) localStorage.removeItem(k); 
+            });
             alert('Progresso local resetado.');
             window.location.reload();
         });
         
-        // Busca
+        // Voltar ao Topo
+        const backToTop = document.getElementById('back-to-top');
+        if (backToTop) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) { 
+                    backToTop.style.display = 'flex'; 
+                    setTimeout(() => { backToTop.style.opacity = '1'; backToTop.style.transform = 'translateY(0)'; }, 10); 
+                } else { 
+                    backToTop.style.opacity = '0'; 
+                    backToTop.style.transform = 'translateY(20px)'; 
+                    setTimeout(() => { backToTop.style.display = 'none'; }, 300); 
+                }
+            });
+            backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+        }
+        
+        // Busca de Módulos
         document.body.addEventListener('input', e => {
             if(e.target.matches('.module-search')) {
                 const s = e.target.value.toLowerCase();
-                const container = e.target.closest('.p-4'); // Ajuste para pegar o container correto
+                // Encontra o container pai mais próximo da sidebar
+                const container = e.target.closest('.p-4') || e.target.closest('.sidebar'); 
                 if(container) {
                     container.querySelectorAll('.module-list-item').forEach(i => {
-                        i.style.display = i.textContent.toLowerCase().includes(s) ? 'flex' : 'none';
+                        const text = i.textContent.toLowerCase();
+                        i.style.display = text.includes(s) ? 'flex' : 'none';
                     });
                 }
             }
         });
     }
 
-    // --- FUNÇÕES AUXILIARES ---
+    // --- 8. FUNÇÕES AUXILIARES DE CONTEÚDO ---
+    
     function handleInitialLoad() {
         const lastModule = localStorage.getItem('gateBombeiroLastModule');
         if (lastModule) loadModuleContent(lastModule); else goToHomePage();
@@ -287,6 +396,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadQuestionBank(moduleId) {
         if (cachedQuestionBanks[moduleId]) return cachedQuestionBanks[moduleId];
         if (typeof QUIZ_DATA === 'undefined') return null;
+        
         const questions = QUIZ_DATA[moduleId];
         if (questions) cachedQuestionBanks[moduleId] = questions;
         return questions;
@@ -301,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedNote = localStorage.getItem('note-' + id) || ''; 
         const categoryColor = getCategoryColor(id);
         
+        // Transição Suave
         contentArea.style.opacity = '0';
         loadingSpinner.classList.remove('hidden');
         contentArea.classList.add('hidden'); 
@@ -311,14 +422,18 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingSpinner.classList.add('hidden');
             contentArea.classList.remove('hidden'); 
 
+            // Constrói o HTML do módulo
             let html = `
                 <h3 class="flex items-center text-3xl mb-6 pb-4 border-b"><i class="${d.iconClass} mr-4 ${categoryColor} fa-fw"></i>${d.title}</h3>
-                <div>${d.content}</div>
+                <div class="content-body">${d.content}</div>
             `;
 
+            // Adiciona Quiz
             if (allQuestions && allQuestions.length > 0) {
+                // Seleciona 4 perguntas aleatórias
                 const count = Math.min(allQuestions.length, 4); 
                 const shuffledQuestions = shuffleArray(allQuestions).slice(0, count);
+                
                 let quizHtml = `<hr><h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Exercícios de Fixação</h3>`;
                 shuffledQuestions.forEach((q, index) => {
                     quizHtml += `<div class="quiz-block" data-question-id="${q.id}">
@@ -332,8 +447,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     quizHtml += `</div><div id="feedback-${q.id}" class="feedback-area hidden"></div></div>`;
                 });
                 html += quizHtml;
+            } else {
+                 html += `<div class="warning-box mt-8">Sem exercícios disponíveis para este módulo.</div>`;
             }
 
+            // Adiciona Botão de Conclusão e Notas
             html += `
                 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
                     <button class="action-button conclude-button" data-module="${id}">Concluir Módulo</button>
@@ -344,15 +462,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>`;
 
             contentArea.innerHTML = html;
+            
+            // Re-conecta os listeners internos do módulo
             setupQuizListeners();
             setupConcludeButtonListener();
             setupNotesListener(id);
+            
+            // Finaliza transição
             contentArea.style.opacity = '1';
             contentArea.style.transition = 'opacity 0.3s ease';
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            
             updateActiveModuleInList();
             updateNavigationButtons();
             updateBreadcrumbs(d.title);
+            
             document.getElementById('module-nav').classList.remove('hidden');
             document.getElementById('next-module')?.classList.remove('blinking-button');
         }, 300);
@@ -361,18 +485,23 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleQuizOptionClick(e) {
         const o = e.currentTarget;
         if (o.disabled) return;
+        
         const moduleId = o.dataset.module;
         const questionId = o.dataset.questionId;
         const selectedAnswer = o.dataset.answer;
+        
         const questionData = cachedQuestionBanks[moduleId]?.find(q => q.id === questionId);
         if (!questionData) return;
+        
         const correctAnswer = questionData.answer;
         const optionsGroup = o.closest('.quiz-options-group');
         const feedbackArea = document.getElementById(`feedback-${questionId}`);
+        
         optionsGroup.querySelectorAll(`.quiz-option`).forEach(opt => {
             opt.disabled = true;
             if (opt.dataset.answer === correctAnswer) opt.classList.add('correct');
         });
+        
         let feedbackContent = '';
         if (selectedAnswer === correctAnswer) {
             o.classList.add('correct');
@@ -382,6 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
             o.classList.add('incorrect');
             feedbackContent = `<strong class="text-red-600">Incorreto.</strong> ${questionData.explanation || ''}`;
         }
+        
         if (feedbackArea) {
             feedbackArea.innerHTML = `<div class="explanation mt-2">${feedbackContent}</div>`;
             feedbackArea.classList.remove('hidden');
@@ -389,7 +519,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function updateBreadcrumbs(moduleTitle = 'Início') {
+        const breadcrumbContainer = document.getElementById('breadcrumb-container');
         const homeLink = `<a href="#" id="home-breadcrumb" class="text-blue-600 dark:text-blue-400 hover:text-orange-500 transition-colors"><i class="fas fa-home mr-1"></i> Início</a>`;
+        
         if (!currentModuleId) {
             breadcrumbContainer.innerHTML = homeLink;
         } else {
@@ -403,6 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 breadcrumbContainer.innerHTML = `${homeLink} <span class="mx-2">/</span> ${moduleTitle}`;
             }
         }
+        document.getElementById('home-breadcrumb')?.addEventListener('click', (e) => { e.preventDefault(); goToHomePage(); });
     }
     
     function setupNotesListener(id) {
@@ -424,17 +557,20 @@ document.addEventListener('DOMContentLoaded', () => {
         closeSidebar();
         updateBreadcrumbs();
         
-        // Re-attach start button listener
+        // Re-conecta botão de Início
         document.getElementById('start-course')?.addEventListener('click', () => {
             loadModuleContent('module1');
+            // Abre a primeira categoria
             const firstBtn = document.querySelector('#desktop-module-container .accordion-button');
             if(firstBtn) {
+                 const p = firstBtn.nextElementSibling;
                  firstBtn.classList.add('active');
-                 if(firstBtn.nextElementSibling) firstBtn.nextElementSibling.style.maxHeight = firstBtn.nextElementSibling.scrollHeight + "px";
+                 if(p) p.style.maxHeight = p.scrollHeight + "px";
             }
         });
     }
 
+    // --- 9. UTILITÁRIOS VISUAIS ---
     function setupProtection() {
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
@@ -453,8 +589,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updateThemeIcons();
     }
     function updateThemeIcons() {
-        const icon = document.documentElement.classList.contains('dark') ? 'fa-sun' : 'fa-moon';
-        document.querySelectorAll('#dark-mode-toggle-desktop i, #bottom-nav-theme i').forEach(i => i.className = `fas ${icon} text-2xl`);
+        // Atualiza ícones no Desktop e Mobile
+        // Desktop
+        const deskBtn = document.querySelector('#dark-mode-toggle-desktop i');
+        if(deskBtn) deskBtn.className = document.documentElement.classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
+        // Mobile - tratado pelo CSS via ::after, não precisa de JS
     }
 
     function shuffleArray(array) {
@@ -488,22 +627,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function closeSidebar() {
+        const sidebar = document.getElementById('off-canvas-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
         sidebar?.classList.remove('open');
-        sidebarOverlay?.classList.remove('show');
-        setTimeout(() => sidebarOverlay?.classList.add('hidden'), 300);
+        overlay?.classList.remove('show');
+        setTimeout(() => overlay?.classList.add('hidden'), 300);
     }
     function openSidebar() {
+        const sidebar = document.getElementById('off-canvas-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
         sidebar?.classList.add('open');
-        sidebarOverlay?.classList.remove('hidden');
-        setTimeout(() => sidebarOverlay?.classList.add('show'), 10);
+        overlay?.classList.remove('hidden');
+        setTimeout(() => overlay?.classList.add('show'), 10);
     }
+    
     function populateModuleLists() {
         const html = getModuleListHTML();
         document.getElementById('desktop-module-container').innerHTML = html;
         document.getElementById('mobile-module-container').innerHTML = html;
     }
     function getModuleListHTML() {
-        let html = `<h2 class="text-2xl font-semibold mb-5 flex items-center text-blue-900 dark:text-white"><i class="fas fa-list-ul mr-3 text-orange-500"></i> Conteúdo</h2><div class="module-accordion-container space-y-2">`;
+        let html = `<h2 class="text-2xl font-semibold mb-5 flex items-center text-blue-900 dark:text-white"><i class="fas fa-list-ul mr-3 text-orange-500"></i> Conteúdo</h2>
+                    <div class="mb-4 relative"><input type="text" class="module-search w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700 text-sm" placeholder="Buscar módulo..."></div>
+                    <div class="module-accordion-container space-y-2">`;
         for (const k in moduleCategories) {
             const cat = moduleCategories[k];
             html += `<div><button class="accordion-button"><span><i class="${cat.icon} w-6 mr-2 text-gray-500"></i>${cat.title}</span><i class="fas fa-chevron-down"></i></button><div class="accordion-panel">`;
@@ -526,6 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('completed-modules-count').textContent = completedModules.length;
         const bar = document.getElementById('progress-bar-minimal');
         if (bar) bar.style.width = `${p}%`;
+        
         updateModuleListStyles();
         checkAchievements();
         if (totalModules > 0 && completedModules.length === totalModules) showCongratulations();
@@ -566,17 +713,15 @@ document.addEventListener('DOMContentLoaded', () => {
         achievementOverlay.classList.add('show');
         if(typeof confetti === 'function') confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, zIndex: 103 });
     }
-    function hideAchievementModal() {
-        achievementModal?.classList.remove('show');
-        achievementOverlay?.classList.remove('show');
-    }
 
     function setupConcludeButtonListener() {
         if (!currentModuleId) return;
-        const b = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
-        if(b) {
-            b.replaceWith(b.cloneNode(true));
-            const newB = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
+        // Clona o botão para remover listeners antigos
+        const oldB = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
+        if(oldB) {
+            const newB = oldB.cloneNode(true);
+            oldB.parentNode.replaceChild(newB, oldB);
+            
             if(completedModules.includes(currentModuleId)){
                 newB.disabled=true;
                 newB.innerHTML='<i class="fas fa-check-circle mr-2"></i> Concluído';
@@ -596,12 +741,22 @@ document.addEventListener('DOMContentLoaded', () => {
             updateProgress();
             b.disabled = true;
             b.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Concluído';
+            showAchievementToast(moduleContent[id].title);
             if(typeof confetti === 'function') confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, zIndex: 2000 });
         }
     }
+    function showAchievementToast(title) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<i class="fas fa-trophy"></i><div><p class="font-bold">Módulo Concluído!</p><p class="text-sm">${title}</p></div>`;
+        toastContainer.appendChild(toast);
+        setTimeout(() => toast.remove(), 4500);
+    }
+    
     function updateActiveModuleInList() {
         document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('active', i.dataset.module === currentModuleId));
     }
+    
     function updateNavigationButtons() {
         const prev = document.getElementById('prev-module');
         const next = document.getElementById('next-module');
@@ -610,6 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
         prev.disabled = (n === 1);
         next.disabled = (n === totalModules);
     }
+    
     function setupQuizListeners() {
         document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
     }
@@ -639,5 +795,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- INICIA TUDO ---
     init();
 });
