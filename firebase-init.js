@@ -1,102 +1,96 @@
 /* firebase-init.js
-   Funções de autenticação, controle de sessão e acesso.
+   Autenticação, Sessão Única e Bloqueio de CPF Duplicado.
 */
 
 (function(){
   window.FirebaseCourse = window.FirebaseCourse || {};
 
-  // Helper para gerar ID de sessão aleatório
   function generateSessionId() {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 
   // --- 1. INICIALIZAÇÃO ---
   window.FirebaseCourse.init = function(config){
-    if (!config || !window.firebase) {
-      console.warn('Firebase não inicializado. Verifique as configurações.');
-      return;
-    }
-    try {
-      if (!firebase.apps.length) {
-          firebase.initializeApp(config);
-      }
-      window.__fbAuth = firebase.auth();
-      window.__fbDB = firebase.firestore();
-      console.log('Firebase Iniciado com Sucesso.');
-    } catch(e){
-      console.error('Erro ao iniciar Firebase:', e);
-    }
+    if (!config || !window.firebase) return;
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    window.__fbAuth = firebase.auth();
+    window.__fbDB = firebase.firestore();
+    console.log('Firebase Iniciado.');
   };
 
-  // --- 2. CADASTRO (Com CPF e Sessão Única) ---
+  // --- 2. CADASTRO (Com Verificação de CPF Duplicado) ---
   window.FirebaseCourse.signUpWithEmail = async function(name, email, password, cpf){
-    if (!window.__fbAuth || !window.__fbDB) throw new Error('Firebase não inicializado.');
+    if (!window.__fbAuth || !window.__fbDB) throw new Error('Firebase off.');
 
-    // 1. Cria o usuário no Authentication
+    // A. Limpa o CPF (apenas números)
+    const cleanCPF = cpf.replace(/\D/g, '');
+    
+    // B. Verifica se o CPF já existe na coleção auxiliar 'cpfs'
+    const cpfDoc = await __fbDB.collection('cpfs').doc(cleanCPF).get();
+    if (cpfDoc.exists) {
+        throw new Error('CPF_ALREADY_IN_USE');
+    }
+
+    // C. Cria o usuário no Authentication (Email único é garantido aqui)
     const userCred = await __fbAuth.createUserWithEmailAndPassword(email, password);
     const uid = userCred.user.uid;
     
-    // 2. Gera expiração e Sessão ID
     const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const newSessionId = generateSessionId();
 
-    // 3. Salva no Firestore
-    await __fbDB.collection('users').doc(uid).set({
+    // D. Salva os dados em LOTE (Batch) para garantir que tudo seja salvo ou nada seja
+    const batch = __fbDB.batch();
+    
+    // Referência do Usuário
+    const userRef = __fbDB.collection('users').doc(uid);
+    batch.set(userRef, {
       name: name,
       email: email,
-      cpf: cpf, // Salva o CPF
+      cpf: cpf, 
+      clean_cpf: cleanCPF,
       status: 'trial',
       acesso_ate: trialEndDate.toISOString(),
-      session_id: newSessionId // Segurança anti-empréstimo
+      session_id: newSessionId
     });
+
+    // Referência do CPF (Trava de duplicidade)
+    const cpfRef = __fbDB.collection('cpfs').doc(cleanCPF);
+    batch.set(cpfRef, { uid: uid });
+
+    await batch.commit();
     
-    // Salva sessão localmente
     localStorage.setItem('current_session_id', newSessionId);
-    
-    console.log(`Usuário ${uid} criado com trial.`);
     return { uid };
   };
 
-  // --- 3. LOGIN (Com Sessão Única) ---
+  // --- 3. LOGIN ---
   window.FirebaseCourse.signInWithEmail = async function(email, password){
-    if (!window.__fbAuth) throw new Error('Firebase não inicializado.');
-    
-    // 1. Autentica
+    if (!window.__fbAuth) throw new Error('Firebase off.');
     const userCred = await __fbAuth.signInWithEmailAndPassword(email, password);
     const uid = userCred.user.uid;
 
-    // 2. Gera NOVA sessão e atualiza no banco (Derruba outros logins)
     const newSessionId = generateSessionId();
-    await __fbDB.collection('users').doc(uid).update({
-        session_id: newSessionId
-    });
-
-    // 3. Salva sessão localmente
+    await __fbDB.collection('users').doc(uid).update({ session_id: newSessionId });
     localStorage.setItem('current_session_id', newSessionId);
 
     return userCred.user;
   };
 
-  // --- 4. BUSCAR DADOS DO USUÁRIO ---
+  // --- 4. UTILS ---
   window.FirebaseCourse.getUserDoc = async function(uid){
-    if (!window.__fbDB) throw new Error('Firebase não inicializado.');
     const doc = await __fbDB.collection('users').doc(uid).get();
-    if (!doc.exists) {
-        throw new Error("Documento de usuário não encontrado no Firestore.");
-    }
+    if (!doc.exists) throw new Error("Usuário não encontrado no banco.");
     return doc.data();
   };
   
-  // --- 5. LOGOUT ---
   window.FirebaseCourse.signOutUser = async function() {
     if (!window.__fbAuth) return;
     await __fbAuth.signOut();
     localStorage.removeItem('current_session_id');
-    console.log("Usuário deslogado.");
     window.location.reload(); 
   };
 
-  // --- 6. CHECK AUTH (Valida Acesso e Sessão Única) ---
+  // --- 5. CHECK AUTH ---
   window.FirebaseCourse.checkAuth = function(onLoginSuccess) {
     if (!window.__fbAuth) return;
     
@@ -109,43 +103,39 @@
         try {
           const userData = await FirebaseCourse.getUserDoc(user.uid);
           
-          // VERIFICAÇÃO DE SEGURANÇA (Sessão Única)
+          // Sessão Única
           const localSession = localStorage.getItem('current_session_id');
-          // Se a sessão do banco for diferente da local, alguém logou em outro lugar
           if (userData.session_id && localSession && userData.session_id !== localSession) {
-              alert("Sua conta foi acessada em outro dispositivo. Você foi desconectado.");
+              alert("Sua conta foi aberta em outro dispositivo. Você foi desconectado.");
               await FirebaseCourse.signOutUser();
               return;
           }
-          
-          // Se não tinha sessão local (ex: limpou cache), sincroniza
-          if (!localSession) {
-              localStorage.setItem('current_session_id', userData.session_id);
-          }
+          if (!localSession) localStorage.setItem('current_session_id', userData.session_id);
 
-          // VERIFICAÇÃO DE VALIDADE
+          // Validade
           const acessoAte = new Date(userData.acesso_ate);
           const hoje = new Date();
 
-          if (acessoAte > hoje) {
+          if (acessoAte > hoje || userData.status === 'paid') {
             onLoginSuccess(user, userData);
           } else {
-            console.warn("Acesso expirado.");
-            if(expiredModal) expiredModal.classList.add('show');
+            // EXPIRED: Mostra modal de renovação
+            if(expiredModal) {
+                expiredModal.classList.add('show');
+                // Se certifica que o modal de login sumiu
+                loginModal?.classList.remove('show');
+            }
             if(loginOverlay) loginOverlay.classList.add('show');
-            // Se expirado, não fecha o modal de login nem inicia o app
           }
           
         } catch (error) {
-          console.error("Erro de verificação:", error);
+          console.error("Erro:", error);
           await FirebaseCourse.signOutUser();
         }
-        
       } else {
         if(loginModal) loginModal.classList.add('show');
         if(loginOverlay) loginOverlay.classList.add('show');
       }
     });
   };
-
 })();
