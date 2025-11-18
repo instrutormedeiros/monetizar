@@ -5,7 +5,7 @@
 (function(){
   window.FirebaseCourse = window.FirebaseCourse || {};
 
-  // Gera um ID único para cada login
+  // Gera um ID único para cada sessão de login
   function generateSessionId() {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
@@ -37,7 +37,7 @@
     const userCred = await __fbAuth.createUserWithEmailAndPassword(email, password);
     const uid = userCred.user.uid;
     
-    // Define validade de 30 dias
+    // Define validade de 30 dias (Trial)
     const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const newSessionId = generateSessionId();
 
@@ -56,7 +56,7 @@
       session_id: newSessionId
     });
 
-    // 2. Salva o CPF na coleção de bloqueio
+    // 2. Salva o CPF na coleção de bloqueio (TRAVA)
     const cpfRef = __fbDB.collection('cpfs').doc(cleanCPF);
     batch.set(cpfRef, { uid: uid });
 
@@ -114,7 +114,7 @@
 
     __fbAuth.onAuthStateChanged(async (user) => {
       if (user) {
-        // Se o usuário logou, começamos a "vigiar" o documento dele no banco
+        // Se o usuário logou, começamos a "vigiar" o documento dele no banco em tempo real
         if (unsubscribeSnapshot) unsubscribeSnapshot(); // Limpa vigias anteriores
 
         const userRef = __fbDB.collection('users').doc(user.uid);
@@ -133,16 +133,16 @@
                 return;
             }
             
-            // Se acabou de logar e não tem sessão local, sincroniza
+            // Se acabou de logar e não tem sessão local (ex: limpou cache), sincroniza
             if (!localSession && userData.session_id) {
                 localStorage.setItem('current_session_id', userData.session_id);
             }
 
-            // 2. VALIDADE DO ACESSO
+            // 2. VALIDADE DO ACESSO (Trial ou Pago)
             const acessoAte = new Date(userData.acesso_ate);
             const hoje = new Date();
             
-            // Se a data é válida OU o status é 'paid' (pago)
+            // Se a data é válida OU o status é 'paid' (pago pelo admin)
             if (acessoAte > hoje || userData.status === 'paid') {
                 // LIBERA O ACESSO
                 onLoginSuccess(user, userData);
