@@ -1,9 +1,10 @@
 /* === ARQUIVO app.js (CORREÇÃO FINAL DE TIMING) === */
 
-// Espera o HTML estar 100% carregado ANTES de executar qualquer código
+// ESPERA O HTML ESTAR 100% CARREGADO ANTES DE EXECUTAR QUALQUER COISA
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- VERIFICAÇÃO DE SEGURANÇA (Primeira coisa a rodar) ---
+    // (Verifica se data.js e course.js carregaram)
     if (typeof moduleContent === 'undefined' || typeof moduleCategories === 'undefined' || typeof questionSources === 'undefined') {
         
         document.getElementById('main-header')?.classList.add('hidden');
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- VARIÁVEIS GLOBAIS DO APP ---
+    // (Agora estão seguras dentro do DOMContentLoaded)
     const contentArea = document.getElementById('content-area');
     const totalModules = Object.keys(moduleContent).length;
     let completedModules = JSON.parse(localStorage.getItem('gateBombeiroCompletedModules_v3')) || [];
@@ -122,8 +124,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // 4. Inicia o resto do app (lógica do antigo init())
+        // ESTES SÃO OS ELEMENTOS QUE ESTAVAM DANDO 'null'
         document.getElementById('total-modules').textContent = totalModules;
         document.getElementById('course-modules-count').textContent = totalModules;
+        
         populateModuleLists();
         updateProgress();
         addEventListeners(); // Adiciona os listeners principais do app
@@ -997,5 +1001,4 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- INICIALIZAÇÃO DO APP ---
     // A chamada init() agora está segura dentro do DOMContentLoaded.
     init();
-
-}); // FIM do wrapper DOMContentLoaded
+});
