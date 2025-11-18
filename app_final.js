@@ -77,7 +77,6 @@ function init() {
   storageBucket: "projeto-bravo-charlie-app.firebasestorage.app",
   messagingSenderId: "26745008470",
   appId: "1:26745008470:web:5f25965524c646b3e666f7",
-  measurementId: "G-Y7VZFQ0D9F"
 };
     
     // Verifica se o Firebase foi carregado
