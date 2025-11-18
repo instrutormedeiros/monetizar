@@ -83,12 +83,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // O checkAuth agora controla o início do app
         // Ele chamará onLoginSuccess APENAS se o acesso for válido
         
-        // <<< INÍCIO DA CORREÇÃO DE ESCOPO >>>
+        // <<< CORREÇÃO DE ESCOPO >>>
         // Envolvemos a chamada em uma arrow function para manter o escopo de 'app_final.js'.
         FirebaseCourse.checkAuth((user, userData) => {
             onLoginSuccess(user, userData);
         });
-        // <<< FIM DA CORREÇÃO DE ESCOPO >>>
     }
     
     // --- NOVA FUNÇÃO: INICIA O APP APÓS LOGIN VÁLIDO ---
@@ -171,11 +170,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 feedback.textContent = "Login com sucesso! Carregando...";
             } catch (error) {
                 console.error("Erro de Login:", error.code);
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                // <<< INÍCIO DA CORREÇÃO DE ERRO DE LOGIN >>>
+                // Firebase v9+ (compat) usa 'auth/invalid-credential' para ambos
+                if (error.code === 'auth/invalid-credential') {
                     feedback.textContent = "E-mail ou senha inválidos.";
                 } else {
                     feedback.textContent = "Erro ao tentar fazer login.";
                 }
+                // <<< FIM DA CORREÇÃO DE ERRO DE LOGIN >>>
             }
         });
         
@@ -521,7 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return newArray;
     }
     
-    // --- FUNÇÃO DE CORES (CORRIGIDA) ---
+    // <<< CORREÇÃO DE COR >>>
     function getCategoryColor(moduleId) {
         if (!moduleId) return 'text-gray-500'; 
         const num = parseInt(moduleId.replace('module', ''));
@@ -544,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return 'text-gray-500';
     }
+    // <<< FIM DA CORREÇÃO DE COR >>>
     
     // --- FUNÇÃO setupPrintWatermarkContent (MODIFICADA) ---
     function setupPrintWatermarkContent(name) {
@@ -990,7 +993,7 @@ document.addEventListener('click', function (e) {
 });
 // ==== PERGUNTAS: EFEITO RIPPLE ====
 document.addEventListener('click', function (e) {
-  // ... (esta seção está correta, sem alterações) ...
+  // ... (esta função está correta, sem alterações) ...
   const option = e.target.closest('.quiz-option');
   if (!option) return;
   const oldRipple = option.querySelector('.ripple');
