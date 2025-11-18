@@ -1,12 +1,10 @@
-/* === ARQUIVO app_final.js (CORRIGIDO: shuffleArray + Escopo Global) === */
+/* === ARQUIVO app_final.js (CORREÇÃO FINAL DE ESCOPO) === */
 
 document.addEventListener('DOMContentLoaded', () => {
 
     // =================================================================
-    // 1. DECLARAÇÃO GLOBAL DE VARIÁVEIS (Acessíveis por todas as funções)
+    // 1. VARIÁVEIS GLOBAIS E SELETORES
     // =================================================================
-    
-    // Elementos UI Principais
     const contentArea = document.getElementById('content-area');
     const loadingSpinner = document.getElementById('loading-spinner');
     const welcomeContainer = document.getElementById('welcome-greeting-container');
@@ -15,14 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const mainHeader = document.getElementById('main-header');
     const footer = document.querySelector('footer');
     const navMobile = document.querySelector('nav.lg\\:hidden');
-
-    // Elementos de Navegação e Sidebar
     const sidebar = document.getElementById('off-canvas-sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const mobileMenuBtn = document.getElementById('mobile-menu-button');
-    const closeSidebarBtn = document.getElementById('close-sidebar-button');
-    
-    // Elementos de Notificação e Feedback
     const toastContainer = document.getElementById('toast-container');
     const printWatermark = document.getElementById('print-watermark');
 
@@ -37,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetOverlay = document.getElementById('reset-modal-overlay');
     const modalOverlay = document.getElementById('modal-overlay');
 
-    // Dados do Curso
+    // Dados
     const hasData = (typeof moduleContent !== 'undefined' && typeof moduleCategories !== 'undefined');
     const totalModules = hasData ? Object.keys(moduleContent).length : 0;
     let completedModules = JSON.parse(localStorage.getItem('gateBombeiroCompletedModules_v3')) || [];
@@ -45,120 +37,99 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModuleId = null;
     let cachedQuestionBanks = {}; 
 
-
     // =================================================================
-    // 2. VERIFICAÇÃO DE SEGURANÇA (CRÍTICA)
+    // 2. VERIFICAÇÃO DE DADOS
     // =================================================================
     if (!hasData || typeof questionSources === 'undefined') {
-        console.error("Arquivos de dados (data.js/course.js) ausentes ou corrompidos.");
-        
-        // Esconde elementos de navegação para focar no erro
+        console.error("Arquivos de dados ausentes.");
         if(mainHeader) mainHeader.classList.add('hidden');
         if(footer) footer.classList.add('hidden');
         if(navMobile) navMobile.classList.add('hidden');
         if(welcomeContainer) welcomeContainer.classList.add('hidden');
-        if(breadcrumbContainer) breadcrumbContainer.classList.add('hidden');
-        if(stickyProgress) stickyProgress.classList.add('hidden');
-
+        
         if (contentArea) {
             contentArea.innerHTML = `
                 <div class="text-center py-10 px-6">
-                    <h2 class="text-2xl font-bold text-red-600 mb-4">Erro de Carregamento</h2>
-                    <p class="text-gray-600 mb-4">Os arquivos de dados essenciais não foram encontrados.</p>
-                    <button onclick="location.reload()" class="action-button">Recarregar Página</button>
+                    <h2 class="text-2xl font-bold text-red-600 mb-4">Erro de Dados</h2>
+                    <p class="text-gray-600 mb-4">Arquivos essenciais não carregaram. Tente recarregar.</p>
+                    <button onclick="location.reload()" class="action-button">Recarregar</button>
                 </div>`;
             contentArea.closest('.bg-white')?.classList.remove('hidden');
             if(loadingSpinner) loadingSpinner.classList.add('hidden');
         }
-        return; // Interrompe a execução se não houver dados
+        return;
     }
 
-
     // =================================================================
-    // 3. FUNÇÃO DE INICIALIZAÇÃO (INIT)
+    // 3. FUNÇÕES UTILITÁRIAS (DEFINIDAS PRIMEIRO)
     // =================================================================
-    function init() {
-        setupProtection();
-        setupTheme();
-        
-        // Configuração do Firebase
-        const firebaseConfig = {
-          apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
-          authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
-          projectId: "projeto-bravo-charlie-app",
-          storageBucket: "projeto-bravo-charlie-app.appspot.com",
-          messagingSenderId: "26745008470",
-          appId: "1:26745008470:web:5f25965524c646b3e666f7"
-        };
-        
-        if (typeof FirebaseCourse !== 'undefined') {
-             FirebaseCourse.init(firebaseConfig);
-             
-             // Configura os listeners de Autenticação (Login/Cadastro)
-             setupAuthEventListeners(); 
-             
-             // Configura Logout
-             document.querySelectorAll('#logout-button, #logout-expired-button').forEach(btn => {
-                 btn.addEventListener('click', FirebaseCourse.signOutUser);
-             });
-
-             // Verifica Autenticação
-             FirebaseCourse.checkAuth((user, userData) => {
-                onLoginSuccess(user, userData);
-             });
-        } else {
-            alert("Erro Crítico: Firebase não carregado.");
-        }
-        
-        // Inicia Listeners Globais (UI) independentes do Login
-        setupHeaderScroll();
-        setupRippleEffects();
-        addGlobalEventListeners(); 
-    }
     
-    // =================================================================
-    // 4. LÓGICA DE LOGIN E DESBLOQUEIO
-    // =================================================================
-    function onLoginSuccess(user, userData) {
-        console.log(`App liberado para: ${userData.name}`);
-        
-        // Esconde Modais de Login
-        if(namePromptModal) namePromptModal.classList.remove('show');
-        if(nameModalOverlay) nameModalOverlay.classList.remove('show');
-        
-        // Personaliza Saudação
-        const greetingEl = document.getElementById('welcome-greeting');
-        if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
-        
-        // Marca D'água de Segurança
-        if (printWatermark) {
-            printWatermark.textContent = `Licenciado para: ${userData.name} - CPF: ${userData.cpf}`;
+    function shuffleArray(array) {
+        let newArray = [...array]; 
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
         }
+        return newArray;
+    }
 
-        // Atualiza Contadores
-        const totalEl = document.getElementById('total-modules');
-        const courseEl = document.getElementById('course-modules-count');
-        if(totalEl) totalEl.textContent = totalModules;
-        if(courseEl) courseEl.textContent = totalModules;
-        
-        // Preenche Listas e Carrega Progresso
-        populateModuleLists();
-        updateProgress();
-        
-        // Carrega o último módulo acessado ou vai para Home
-        handleInitialLoad();
+    function isValidCPF(cpf) {
+        cpf = cpf.replace(/[^\d]+/g,'');
+        if(cpf == '') return false;
+        if (cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+        let add = 0;
+        for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
+        let rev = 11 - (add % 11);
+        if (rev == 10 || rev == 11) rev = 0;
+        if (rev != parseInt(cpf.charAt(9))) return false;
+        add = 0;
+        for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
+        rev = 11 - (add % 11);
+        if (rev == 10 || rev == 11) rev = 0;
+        if (rev != parseInt(cpf.charAt(10))) return false;
+        return true;
     }
 
     // =================================================================
-    // 5. LÓGICA DE CARREGAMENTO DE CONTEÚDO (MÓDULOS)
+    // 4. FUNÇÕES PRINCIPAIS (QUIZ E CONTEÚDO)
     // =================================================================
-    function handleInitialLoad() {
-        const lastModule = localStorage.getItem('gateBombeiroLastModule');
-        if (lastModule) {
-            loadModuleContent(lastModule);
+
+    // Define handleQuizOptionClick ANTES de ser usada
+    function handleQuizOptionClick(e) {
+        const o = e.currentTarget;
+        if (o.disabled) return;
+        
+        const moduleId = o.dataset.module;
+        const questionId = o.dataset.questionId;
+        const selectedAnswer = o.dataset.answer;
+        
+        const questionData = cachedQuestionBanks[moduleId]?.find(q => q.id === questionId);
+        if (!questionData) return;
+        
+        const correctAnswer = questionData.answer;
+        const optionsGroup = o.closest('.quiz-options-group');
+        const feedbackArea = document.getElementById(`feedback-${questionId}`);
+        
+        optionsGroup.querySelectorAll(`.quiz-option`).forEach(opt => {
+            opt.disabled = true;
+            if (opt.dataset.answer === correctAnswer) opt.classList.add('correct');
+        });
+        
+        if (selectedAnswer === correctAnswer) {
+            o.classList.add('correct');
+            if (typeof triggerSuccessParticles === 'function') triggerSuccessParticles(e, o);
+            if(feedbackArea) feedbackArea.innerHTML = `<div class="explanation mt-2"><strong class="text-green-600">Correto!</strong> ${questionData.explanation || ''}</div>`;
         } else {
-            goToHomePage();
+            o.classList.add('incorrect');
+            if(feedbackArea) feedbackArea.innerHTML = `<div class="explanation mt-2"><strong class="text-red-600">Incorreto.</strong> ${questionData.explanation || ''}</div>`;
         }
+        
+        if (feedbackArea) feedbackArea.classList.remove('hidden');
+    }
+
+    function setupQuizListeners() {
+        // Agora handleQuizOptionClick já existe neste escopo
+        document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
     }
 
     async function loadQuestionBank(moduleId) {
@@ -178,35 +149,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedNote = localStorage.getItem('note-' + id) || ''; 
         const categoryColor = getCategoryColor(id);
         
-        // UI: Mostra Spinner
         if(contentArea) {
             contentArea.style.opacity = '0';
             contentArea.classList.add('hidden');
         }
         if(loadingSpinner) loadingSpinner.classList.remove('hidden');
 
-        // Carrega Quiz (Assíncrono)
         let allQuestions = await loadQuestionBank(id);
         
-        // Renderiza após pequeno delay para transição
         setTimeout(() => {
             if(loadingSpinner) loadingSpinner.classList.add('hidden');
-            
             if(contentArea) {
                 contentArea.classList.remove('hidden'); 
 
-                // HTML do Conteúdo
                 let html = `
                     <h3 class="flex items-center text-3xl mb-6 pb-4 border-b"><i class="${d.iconClass} mr-4 ${categoryColor} fa-fw"></i>${d.title}</h3>
                     <div class="content-body">${d.content}</div>
                 `;
 
-                // HTML do Quiz
                 if (allQuestions && allQuestions.length > 0) {
                     const count = Math.min(allQuestions.length, 4); 
-                    // === AQUI ESTAVA O ERRO: shuffleArray AGORA EXISTE ===
                     const shuffledQuestions = shuffleArray(allQuestions).slice(0, count);
-                    
                     let quizHtml = `<hr><h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Exercícios de Fixação</h3>`;
                     shuffledQuestions.forEach((q, index) => {
                         quizHtml += `<div class="quiz-block" data-question-id="${q.id}">
@@ -221,10 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     html += quizHtml;
                 } else {
-                    html += `<div class="warning-box mt-8">Sem exercícios disponíveis para este módulo.</div>`;
+                    html += `<div class="warning-box mt-8">Sem exercícios disponíveis.</div>`;
                 }
 
-                // HTML de Conclusão e Notas
                 html += `
                     <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
                         <button class="action-button conclude-button" data-module="${id}">Concluir Módulo</button>
@@ -237,21 +199,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 contentArea.innerHTML = html;
                 contentArea.style.opacity = '1';
                 
-                // Re-conecta Listeners Específicos do Conteúdo
                 setupQuizListeners();
                 setupConcludeButtonListener();
                 setupNotesListener(id);
             }
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            
             updateActiveModuleInList();
             updateNavigationButtons();
             updateBreadcrumbs(d.title);
             
             const nav = document.getElementById('module-nav');
             if(nav) nav.classList.remove('hidden');
-            
             const nextBtn = document.getElementById('next-module');
             if(nextBtn) nextBtn.classList.remove('blinking-button');
 
@@ -259,173 +218,61 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 6. LISTENERS GLOBAIS DE UI (Eventos da Página)
+    // 5. INICIALIZAÇÃO E AUTH
     // =================================================================
-    function addGlobalEventListeners() {
+    function init() {
+        setupProtection();
+        setupTheme();
         
-        // Clique em itens da lista de módulos (Navegação)
-        document.body.addEventListener('click', e => {
-            const item = e.target.closest('.module-list-item');
-            if (item) {
-                loadModuleContent(item.dataset.module);
-                if (window.innerWidth < 1024) closeSidebar();
-            }
-            
-            // Acordeão (Expandir/Recolher)
-            const accBtn = e.target.closest('.accordion-button');
-            if (accBtn) {
-                const p = accBtn.nextElementSibling;
-                const isActive = accBtn.classList.contains('active');
-                // Fecha irmãos
-                const container = accBtn.closest('.module-accordion-container');
-                if(container) {
-                    container.querySelectorAll('.accordion-panel').forEach(panel => {
-                        if(panel !== p) { 
-                            panel.style.maxHeight = null; 
-                            if(panel.previousElementSibling) panel.previousElementSibling.classList.remove('active'); 
-                        }
-                    });
-                }
-                // Alterna atual
-                if (!isActive) { 
-                    accBtn.classList.add('active'); 
-                    p.style.maxHeight = p.scrollHeight + "px"; 
-                } else { 
-                    accBtn.classList.remove('active'); 
-                    p.style.maxHeight = null; 
-                }
-            }
-        });
-
-        // Botões Anterior/Próximo (Footer do Módulo)
-        document.getElementById('prev-module')?.addEventListener('click', () => {
-            const n = parseInt(currentModuleId.replace('module',''));
-            if(n > 1) loadModuleContent(`module${n-1}`);
-        });
-        document.getElementById('next-module')?.addEventListener('click', () => {
-            const n = parseInt(currentModuleId.replace('module',''));
-            if(n < totalModules) loadModuleContent(`module${n+1}`);
-        });
-        
-        // Sidebar Toggles (Abrir/Fechar)
-        const toggleSidebar = () => {
-            if(sidebar) {
-                if (sidebar.classList.contains('open')) closeSidebar(); else openSidebar();
-            }
+        const firebaseConfig = {
+          apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
+          authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
+          projectId: "projeto-bravo-charlie-app",
+          storageBucket: "projeto-bravo-charlie-app.appspot.com",
+          messagingSenderId: "26745008470",
+          appId: "1:26745008470:web:5f25965524c646b3e666f7"
         };
         
-        // Lista de IDs que abrem a sidebar
-        const sidebarTriggerIds = ['mobile-menu-button', 'bottom-nav-modules', 'focus-menu-modules', 'focus-nav-modules'];
-        sidebarTriggerIds.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener('click', toggleSidebar);
-        });
+        if (typeof FirebaseCourse !== 'undefined') {
+             FirebaseCourse.init(firebaseConfig);
+             setupAuthEventListeners(); 
+             
+             document.querySelectorAll('#logout-button, #logout-expired-button').forEach(btn => {
+                 btn.addEventListener('click', FirebaseCourse.signOutUser);
+             });
 
-        if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
-        if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
-        
-        // Botões Home
-        const goHome = () => goToHomePage();
-        ['home-button-desktop', 'bottom-nav-home', 'home-breadcrumb'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener('click', goHome);
-        });
-        
-        // Botões Tema
-        ['bottom-nav-theme', 'dark-mode-toggle-desktop'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener('click', toggleTheme);
-        });
-        
-        // Botões Modo Foco
-        const toggleFocus = () => {
-            document.body.classList.toggle('focus-mode');
-            if (!document.body.classList.contains('focus-mode')) closeSidebar();
-        };
-        ['focus-mode-toggle', 'bottom-nav-focus', 'focus-menu-exit', 'focus-nav-exit'].forEach(id => {
-            const el = document.getElementById(id);
-            if(el) el.addEventListener('click', toggleFocus);
-        });
-
-        // Modais (Fechar)
-        document.getElementById('close-congrats')?.addEventListener('click', () => {
-            if(congratsModal) congratsModal.classList.remove('show');
-            if(modalOverlay) modalOverlay.classList.remove('show');
-        });
-        document.getElementById('close-ach-modal')?.addEventListener('click', () => {
-            if(achievementModal) achievementModal.classList.remove('show');
-            if(achievementOverlay) achievementOverlay.classList.remove('show');
-        });
-
-        // Reset Progresso
-        const showReset = () => {
-             if(resetModal) resetModal.classList.add('show');
-             if(resetOverlay) resetOverlay.classList.add('show');
-        };
-        document.getElementById('reset-progress')?.addEventListener('click', showReset);
-        
-        document.getElementById('cancel-reset-button')?.addEventListener('click', () => {
-            if(resetModal) resetModal.classList.remove('show');
-            if(resetOverlay) resetOverlay.classList.remove('show');
-        });
-        
-        document.getElementById('confirm-reset-button')?.addEventListener('click', () => {
-            localStorage.removeItem('gateBombeiroCompletedModules_v3');
-            localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
-            Object.keys(localStorage).forEach(k => { if (k.startsWith('note-')) localStorage.removeItem(k); });
-            alert('Progresso local resetado.');
-            window.location.reload();
-        });
-        
-        // Back to Top
-        const backToTop = document.getElementById('back-to-top');
-        if (backToTop) {
-            window.addEventListener('scroll', () => {
-                if (window.scrollY > 300) { 
-                    backToTop.style.display = 'flex'; 
-                    setTimeout(() => { backToTop.style.opacity = '1'; backToTop.style.transform = 'translateY(0)'; }, 10); 
-                } else { 
-                    backToTop.style.opacity = '0'; 
-                    backToTop.style.transform = 'translateY(20px)'; 
-                    setTimeout(() => { backToTop.style.display = 'none'; }, 300); 
-                }
-            });
-            backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+             FirebaseCourse.checkAuth((user, userData) => {
+                onLoginSuccess(user, userData);
+             });
+        } else {
+            alert("Erro crítico: Firebase não detectado.");
         }
         
-        // Busca de Módulos
-        document.body.addEventListener('input', e => {
-            if(e.target.matches('.module-search')) {
-                const s = e.target.value.toLowerCase();
-                const container = e.target.closest('.p-4') || e.target.closest('.sidebar'); 
-                if(container) {
-                    container.querySelectorAll('.module-list-item').forEach(i => {
-                        const text = i.textContent.toLowerCase();
-                        i.style.display = text.includes(s) ? 'flex' : 'none';
-                    });
-                }
-            }
-        });
+        setupHeaderScroll();
+        setupRippleEffects();
+        addGlobalEventListeners(); 
     }
 
-    // =================================================================
-    // 7. LÓGICA DE AUTENTICAÇÃO E CPF
-    // =================================================================
-    function isValidCPF(cpf) {
-        cpf = cpf.replace(/[^\d]+/g,'');
-        if(cpf == '') return false;
-        if (cpf.length != 11 || /^(\d)\1{10}$/.test(cpf)) return false;
-        let add = 0;
-        for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
-        let rev = 11 - (add % 11);
-        if (rev == 10 || rev == 11) rev = 0;
-        if (rev != parseInt(cpf.charAt(9))) return false;
-        add = 0;
-        for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
-        rev = 11 - (add % 11);
-        if (rev == 10 || rev == 11) rev = 0;
-        if (rev != parseInt(cpf.charAt(10))) return false;
-        return true;
+    function onLoginSuccess(user, userData) {
+        console.log(`Login OK: ${userData.name}`);
+        if(namePromptModal) namePromptModal.classList.remove('show');
+        if(nameModalOverlay) nameModalOverlay.classList.remove('show');
+        
+        const greetingEl = document.getElementById('welcome-greeting');
+        if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
+        
+        if (printWatermark) {
+            printWatermark.textContent = `Licenciado para: ${userData.name} - CPF: ${userData.cpf}`;
+        }
+
+        const totalEl = document.getElementById('total-modules');
+        const courseEl = document.getElementById('course-modules-count');
+        if(totalEl) totalEl.textContent = totalModules;
+        if(courseEl) courseEl.textContent = totalModules;
+        
+        populateModuleLists();
+        updateProgress();
+        handleInitialLoad();
     }
 
     function setupAuthEventListeners() {
@@ -439,7 +286,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const authScreen = document.getElementById('auth-content-screen');
         const paymentScreen = document.getElementById('payment-content-screen');
 
-        // Máscara CPF
         const cpfInput = document.getElementById('cpf-input');
         if(cpfInput) {
             cpfInput.addEventListener('input', e => {
@@ -451,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Botões Alternar Login/Cadastro
         document.getElementById('show-signup-button')?.addEventListener('click', () => {
             if(loginGroup) loginGroup.classList.add('hidden');
             if(signupGroup) signupGroup.classList.remove('hidden');
@@ -472,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(feedback) feedback.textContent = "";
         });
 
-        // Botões Pagamento
         document.getElementById('toggle-payment-view')?.addEventListener('click', () => {
             if(authScreen) authScreen.classList.add('hidden');
             if(paymentScreen) paymentScreen.classList.remove('hidden');
@@ -483,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if(authScreen) authScreen.classList.remove('hidden');
         });
         
-        // Login Action
         document.getElementById('login-button')?.addEventListener('click', async () => {
             const email = document.getElementById('email-input').value;
             const pass = document.getElementById('password-input').value;
@@ -517,7 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Cadastro Action
         document.getElementById('signup-button')?.addEventListener('click', async () => {
             const name = document.getElementById('name-input').value;
             const cpf = document.getElementById('cpf-input').value;
@@ -563,17 +405,133 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // =================================================================
-    // 8. FUNÇÕES AUXILIARES E UTILITÁRIOS (RESTAURADOS)
+    // 6. FUNÇÕES AUXILIARES DE UI E NAV
     // =================================================================
-    
-    // *** FUNÇÃO RESTAURADA PARA CORRIGIR O ERRO ***
-    function shuffleArray(array) {
-        let newArray = [...array]; 
-        for (let i = newArray.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    function addGlobalEventListeners() {
+        document.body.addEventListener('click', e => {
+            const item = e.target.closest('.module-list-item');
+            if (item) {
+                loadModuleContent(item.dataset.module);
+                if (window.innerWidth < 1024) closeSidebar();
+            }
+            
+            const accBtn = e.target.closest('.accordion-button');
+            if (accBtn) {
+                const p = accBtn.nextElementSibling;
+                const isActive = accBtn.classList.contains('active');
+                const container = accBtn.closest('.module-accordion-container');
+                if(container) {
+                    container.querySelectorAll('.accordion-panel').forEach(panel => {
+                        if(panel !== p) { 
+                            panel.style.maxHeight = null; 
+                            if(panel.previousElementSibling) panel.previousElementSibling.classList.remove('active'); 
+                        }
+                    });
+                }
+                if (!isActive) { 
+                    accBtn.classList.add('active'); 
+                    p.style.maxHeight = p.scrollHeight + "px"; 
+                } else { 
+                    accBtn.classList.remove('active'); 
+                    p.style.maxHeight = null; 
+                }
+            }
+        });
+
+        document.getElementById('prev-module')?.addEventListener('click', () => {
+            const n = parseInt(currentModuleId.replace('module',''));
+            if(n > 1) loadModuleContent(`module${n-1}`);
+        });
+        document.getElementById('next-module')?.addEventListener('click', () => {
+            const n = parseInt(currentModuleId.replace('module',''));
+            if(n < totalModules) loadModuleContent(`module${n+1}`);
+        });
+        
+        const toggleSidebar = () => {
+            if (sidebar) {
+                if (sidebar.classList.contains('open')) closeSidebar(); else openSidebar();
+            }
+        };
+        
+        ['mobile-menu-button', 'bottom-nav-modules', 'focus-menu-modules', 'focus-nav-modules'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleSidebar);
+        });
+
+        if(closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeSidebar);
+        if(sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+        
+        const goHome = () => goToHomePage();
+        ['home-button-desktop', 'bottom-nav-home', 'home-breadcrumb'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', goHome);
+        });
+        
+        ['bottom-nav-theme', 'dark-mode-toggle-desktop'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleTheme);
+        });
+        
+        const toggleFocus = () => {
+            document.body.classList.toggle('focus-mode');
+            if (!document.body.classList.contains('focus-mode')) closeSidebar();
+        };
+        ['focus-mode-toggle', 'bottom-nav-focus', 'focus-menu-exit', 'focus-nav-exit'].forEach(id => {
+            document.getElementById(id)?.addEventListener('click', toggleFocus);
+        });
+
+        document.getElementById('close-congrats')?.addEventListener('click', () => {
+            if(congratsModal) congratsModal.classList.remove('show');
+            if(modalOverlay) modalOverlay.classList.remove('show');
+        });
+        document.getElementById('close-ach-modal')?.addEventListener('click', () => {
+            if(achievementModal) achievementModal.classList.remove('show');
+            if(achievementOverlay) achievementOverlay.classList.remove('show');
+        });
+
+        const showReset = () => {
+             if(resetModal) resetModal.classList.add('show');
+             if(resetOverlay) resetOverlay.classList.add('show');
+        };
+        document.getElementById('reset-progress')?.addEventListener('click', showReset);
+        
+        document.getElementById('cancel-reset-button')?.addEventListener('click', () => {
+            if(resetModal) resetModal.classList.remove('show');
+            if(resetOverlay) resetOverlay.classList.remove('show');
+        });
+        
+        document.getElementById('confirm-reset-button')?.addEventListener('click', () => {
+            localStorage.removeItem('gateBombeiroCompletedModules_v3');
+            localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
+            Object.keys(localStorage).forEach(k => { if (k.startsWith('note-')) localStorage.removeItem(k); });
+            alert('Progresso local resetado.');
+            window.location.reload();
+        });
+        
+        const backToTop = document.getElementById('back-to-top');
+        if (backToTop) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) { 
+                    backToTop.style.display = 'flex'; 
+                    setTimeout(() => { backToTop.style.opacity = '1'; backToTop.style.transform = 'translateY(0)'; }, 10); 
+                } else { 
+                    backToTop.style.opacity = '0'; 
+                    backToTop.style.transform = 'translateY(20px)'; 
+                    setTimeout(() => { backToTop.style.display = 'none'; }, 300); 
+                }
+            });
+            backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
         }
-        return newArray;
+        
+        document.body.addEventListener('input', e => {
+            if(e.target.matches('.module-search')) {
+                const s = e.target.value.toLowerCase();
+                const container = e.target.closest('.p-4') || e.target.closest('.sidebar'); 
+                if(container) {
+                    container.querySelectorAll('.module-list-item').forEach(i => {
+                        const text = i.textContent.toLowerCase();
+                        i.style.display = text.includes(s) ? 'flex' : 'none';
+                    });
+                }
+            }
+        });
     }
 
     function setupConcludeButtonListener() {
@@ -627,10 +585,6 @@ document.addEventListener('DOMContentLoaded', () => {
         next.disabled = (n === totalModules);
     }
     
-    function setupQuizListeners() {
-        document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
-    }
-
     function triggerSuccessParticles(e, el) {
       if (typeof confetti === 'function') confetti({ particleCount: 28, spread: 70, origin: { x: e.clientX/window.innerWidth, y: e.clientY/window.innerHeight } });
     }
@@ -758,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkAchievements() {
-        // Lógica de conquistas (Mantida)
+        // Lógica de conquistas
     }
 
     function showCongratulations() {
@@ -774,10 +728,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateThemeIcons() {
-        // Ícone Desktop
         const deskBtn = document.querySelector('#dark-mode-toggle-desktop i');
         if(deskBtn) deskBtn.className = document.documentElement.classList.contains('dark') ? 'fas fa-sun' : 'fas fa-moon';
-        // Ícone Mobile é CSS puro
     }
 
     function goToHomePage() {
@@ -802,21 +754,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
     function setupProtection() {
         document.addEventListener('contextmenu', e => e.preventDefault());
         document.addEventListener('keydown', e => {
           if (e.key === 'F12' || (e.ctrlKey && ['p','c','u'].includes(e.key.toLowerCase()))) e.preventDefault();
         });
     }
+
+    function handleInitialLoad() {
+        const lastModule = localStorage.getItem('gateBombeiroLastModule');
+        if (lastModule) {
+            loadModuleContent(lastModule);
+        } else {
+            goToHomePage();
+        }
+    }
+
     function setupTheme() {
         const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', isDark);
         updateThemeIcons();
     }
 
-    // ===========================================================
-    // 9. INICIALIZAÇÃO
-    // ===========================================================
+    // --- INICIALIZAÇÃO ---
     init();
 
 });
