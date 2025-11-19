@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 
-    // --- FUNÇÃO DE QUIZ ---
+    // --- FUNÇÃO DE QUIZ (COM ANIMAÇÃO COMPLETA) ---
     function handleQuizOptionClick(e) {
         const o = e.currentTarget;
         if (o.disabled) return;
@@ -413,9 +413,8 @@ document.addEventListener('DOMContentLoaded', () => {
             o.classList.add('correct');
             feedbackContent = `<strong class="font-semibold text-green-700 dark:text-green-400"><i class="fas fa-check-circle mr-2"></i> Correto!</strong> ${explanationText}`;
             try {
-                if (typeof triggerSuccessParticles === 'function') {
-                    triggerSuccessParticles(e, o);
-                }
+                // CHAMA A ANIMAÇÃO COMPLETA AQUI
+                triggerSuccessParticles(e, o);
             } catch (err) { console.error(err); }
         } else {
             o.classList.add('incorrect');
@@ -921,8 +920,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- MICRO ANIMAÇÃO DE SUCESSO ---
+    // --- MICRO ANIMAÇÃO DE SUCESSO (RESTAURADA COMPLETA) ---
     function triggerSuccessParticles(clickEvent, element) {
+      // 1. Confetti
       if (typeof confetti === 'function') {
         confetti({
           particleCount: 28,
@@ -936,8 +936,11 @@ document.addEventListener('DOMContentLoaded', () => {
           zIndex: 3000
         });
       }
+
+      // 2. Partículas Douradas Flutuantes (DOM)
       const container = document.createElement('div');
       container.className = 'gold-particles-container';
+      // Posição Fixa para garantir que cubra a tela e não quebre layout
       container.style.position = 'fixed'; 
       container.style.left = '0';
       container.style.top = '0';
@@ -946,19 +949,28 @@ document.addEventListener('DOMContentLoaded', () => {
       container.style.height = '100%';
       container.style.zIndex = '4000';
       document.body.appendChild(container);
+
+      // Coordenadas do clique
       const rect = (element && element.getBoundingClientRect) ? element.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 };
       const cx = rect.left + (rect.width / 2);
       const cy = rect.top + (rect.height / 2);
+
+      // Criar 12 partículas
       for (let i = 0; i < 12; i++) {
         const p = document.createElement('div');
         p.className = 'gold-particle';
         p.style.left = `${cx}px`;
         p.style.top = `${cy}px`;
+        // Inicializa no centro
         p.style.transform = 'translate(-50%, -50%)';
+        
         container.appendChild(p);
+
+        // Vetores aleatórios
         const dx = (Math.random() - 0.5) * 180;
-        const dy = -Math.random() * 150 - 20;
+        const dy = -Math.random() * 150 - 20; // Sobe mais
         const rot = Math.random() * 360;
+
         p.animate(
           [
             { transform: `translate(-50%, -50%) translate(0px, 0px) rotate(0deg)`, opacity: 1 },
@@ -969,8 +981,12 @@ document.addEventListener('DOMContentLoaded', () => {
             easing: 'cubic-bezier(.2,.7,.2,1)'
           }
         );
+        
+        // Remove partícula após animação
         setTimeout(() => p.remove(), 1500);
       }
+      
+      // Remove container limpo
       setTimeout(() => { if (container && container.parentNode) container.remove(); }, 1800);
     }
 
