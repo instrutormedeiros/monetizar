@@ -1,12 +1,13 @@
-/* === ARQUIVO app.js (CORREÇÃO FINAL DE TIMING) === */
+/* === ARQUIVO app_final.js (VERSÃO FINAL - COMPLETA E ROBUSTA) === */
 
 // ESPERA O HTML ESTAR 100% CARREGADO ANTES DE EXECUTAR QUALQUER COISA
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- VERIFICAÇÃO DE SEGURANÇA (Primeira coisa a rodar) ---
-    // (Verifica se data.js e course.js carregaram)
+    // (Verifica se data.js e course.js carregaram corretamente)
     if (typeof moduleContent === 'undefined' || typeof moduleCategories === 'undefined' || typeof questionSources === 'undefined') {
         
+        // Esconde elementos da UI se falhar
         document.getElementById('main-header')?.classList.add('hidden');
         document.querySelector('footer')?.classList.add('hidden');
         document.querySelector('nav.lg\\:hidden')?.classList.add('hidden');
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('loading-spinner')?.classList.add('hidden');
         }
         
-        console.error("Erro: Arquivo data.js ou course.js não carregado ou incompleto (moduleContent, moduleCategories, ou questionSources ausente).");
+        console.error("Erro: Arquivo data.js ou course.js não carregado ou incompleto.");
         return; // Interrompe a execução
     }
     // --- FIM DA VERIFICAÇÃO DE SEGURANÇA ---
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setupProtection();
         setupTheme();
         
-        // --- INICIALIZAÇÃO DO FIREBASE (SEUS DADOS) ---
+        // --- INICIALIZAÇÃO DO FIREBASE (CONFIGURAÇÃO CORRETA) ---
         const firebaseConfig = {
           apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
           authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
@@ -81,35 +82,41 @@ document.addEventListener('DOMContentLoaded', () => {
           measurementId: "G-Y7VZFQ0D9F"
         };
         
-        if (typeof FirebaseCourse !== 'undefined') {
-            FirebaseCourse.init(firebaseConfig);
-            
-            // Configura os botões de Login/Cadastro
-            setupAuthEventListeners(); 
-            
-            // Adiciona listener para o botão de Sair (Logout)
-            document.getElementById('logout-button')?.addEventListener('click', FirebaseCourse.signOutUser);
-            document.getElementById('logout-expired-button')?.addEventListener('click', FirebaseCourse.signOutUser);
-
-            // O checkAuth agora controla o início do app
-            FirebaseCourse.checkAuth((user, userData) => {
-                onLoginSuccess(user, userData);
-            });
+        if (typeof FirebaseCourse === 'undefined') {
+            console.error("Firebase-init.js não foi carregado a tempo.");
+            alert("Erro ao carregar o sistema de login. Verifique sua conexão e tente recarregar.");
+            return;
         }
+
+        FirebaseCourse.init(firebaseConfig);
         
-        // Configura os listeners de UI que não dependem de login
+        // Configura os botões de Login, Cadastro e Pagamento
+        setupAuthEventListeners(); 
+        
+        // Adiciona listener para o botão de Sair (Logout)
+        document.getElementById('logout-button')?.addEventListener('click', FirebaseCourse.signOutUser);
+        document.getElementById('logout-expired-button')?.addEventListener('click', FirebaseCourse.signOutUser);
+
+        // O checkAuth controla o início do app e valida a sessão
+        FirebaseCourse.checkAuth((user, userData) => {
+            // Callback de sucesso: usuário logado e acesso válido
+            onLoginSuccess(user, userData);
+        });
+        
+        // Configura os listeners de UI que não dependem de login (scroll, ripple)
         setupHeaderScroll();
         setupRippleEffects();
     }
     
     // --- FUNÇÃO: INICIA O APP APÓS LOGIN VÁLIDO ---
     function onLoginSuccess(user, userData) {
+        // Evita recarregar a UI se já estiver carregada
         if (document.body.getAttribute('data-app-ready') === 'true') return;
         document.body.setAttribute('data-app-ready', 'true');
 
         console.log(`Login bem-sucedido. Iniciando app para ${userData.name}`);
         
-        // 1. Esconde o modal de login
+        // 1. Esconde todos os modais de bloqueio
         document.getElementById('name-prompt-modal')?.classList.remove('show');
         document.getElementById('name-modal-overlay')?.classList.remove('show');
         document.getElementById('expired-modal')?.classList.remove('show');
@@ -119,10 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
         
         if (printWatermark) {
+            // Segurança: CPF na marca d'água
             printWatermark.textContent = `Licenciado para ${userData.name} (CPF: ${userData.cpf || '...'}) - Proibida a Cópia`;
         }
 
-        // 3. Inicia o resto do app
+        // 3. Inicia o conteúdo do curso
         document.getElementById('total-modules').textContent = totalModules;
         document.getElementById('course-modules-count').textContent = totalModules;
         
@@ -132,28 +140,30 @@ document.addEventListener('DOMContentLoaded', () => {
         handleInitialLoad();
     }
 
-    // --- FUNÇÃO: LOGIN/CADASTRO COM CPF E PAGAMENTO ---
+    // --- FUNÇÃO: LOGIN, CADASTRO E PAGAMENTO ---
     function setupAuthEventListeners() {
+        // Campos
         const nameField = document.getElementById('name-field-container');
         const cpfField = document.getElementById('cpf-field-container'); 
-        
         const nameInput = document.getElementById('name-input');
         const cpfInput = document.getElementById('cpf-input'); 
         const emailInput = document.getElementById('email-input');
         const passwordInput = document.getElementById('password-input');
         const feedback = document.getElementById('auth-feedback');
         
+        // Grupos de Botões
         const loginGroup = document.getElementById('login-button-group');
         const signupGroup = document.getElementById('signup-button-group');
         const authTitle = document.getElementById('auth-title');
         const authMsg = document.getElementById('auth-message');
 
+        // Botões de Ação
         const btnShowLogin = document.getElementById('show-login-button');
         const btnShowSignup = document.getElementById('show-signup-button');
         const btnLogin = document.getElementById('login-button');
         const btnSignup = document.getElementById('signup-button');
         
-        // Elementos do Modal de Pagamento
+        // Modal de Pagamento
         const btnOpenPayLogin = document.getElementById('open-payment-login-btn');
         const btnClosePayModal = document.getElementById('close-payment-modal-btn');
         const expiredModal = document.getElementById('expired-modal');
@@ -168,7 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
              
              // Ajusta o modal de expirado para permitir voltar
              btnClosePayModal.classList.remove('hidden');
-             document.getElementById('expired-text-msg').textContent = "Confira nossos planos e realize o pagamento para ativar ou renovar seu acesso.";
+             const msgEl = document.getElementById('expired-text-msg');
+             if(msgEl) msgEl.textContent = "Confira nossos planos e realize o pagamento para ativar ou renovar seu acesso.";
         });
 
         btnClosePayModal?.addEventListener('click', () => {
@@ -193,8 +204,8 @@ document.addEventListener('DOMContentLoaded', () => {
             signupGroup.classList.add('hidden');
             nameField.classList.add('hidden');
             cpfField.classList.add('hidden'); // Esconde CPF
-            authTitle.textContent = "Acessar Plataforma";
-            authMsg.textContent = "Entre com seu e-mail e senha para continuar.";
+            authTitle.textContent = "Área do Aluno";
+            authMsg.textContent = "Identifique-se para acessar o conteúdo.";
             feedback.textContent = "";
         });
         
@@ -207,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             feedback.textContent = "Entrando...";
-            feedback.className = "text-sm mt-4 text-blue-600 font-semibold";
+            feedback.className = "text-center text-sm mt-4 text-blue-400 font-semibold";
             
             try {
                 localStorage.removeItem('my_session_id'); // Limpa sessão anterior
@@ -215,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 feedback.textContent = "Verificando acesso...";
             } catch (error) {
                 console.error("Erro de Login:", error.code);
-                feedback.className = "text-sm mt-4 text-red-600 font-semibold";
+                feedback.className = "text-center text-sm mt-4 text-red-400 font-semibold";
                 if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
                     feedback.textContent = "E-mail ou senha incorretos.";
                 } else if (error.code === 'auth/too-many-requests') {
@@ -243,14 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             feedback.textContent = "Verificando dados...";
-            feedback.className = "text-sm mt-4 text-blue-600 font-semibold";
+            feedback.className = "text-center text-sm mt-4 text-blue-400 font-semibold";
 
             try {
                 await FirebaseCourse.signUpWithEmail(name, email, password, cpf);
                 feedback.textContent = "Conta criada! Iniciando...";
             } catch (error) {
                 console.error("Erro de Cadastro:", error);
-                feedback.className = "text-sm mt-4 text-red-600 font-semibold";
+                feedback.className = "text-center text-sm mt-4 text-red-400 font-semibold";
                 
                 if (error.code === 'auth/email-already-in-use') {
                     feedback.textContent = "Este e-mail já está em uso. Faça login.";
@@ -278,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (cachedQuestionBanks[moduleId]) {
             return cachedQuestionBanks[moduleId];
         }
+        // Verifica se QUIZ_DATA existe (carregado do arquivo quizzes.js)
         if (typeof QUIZ_DATA === 'undefined') {
             console.error("Erro fatal: quizzes.js não carregou ou 'QUIZ_DATA' não está definido.");
             return null;
@@ -300,12 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const savedNote = localStorage.getItem('note-' + id) || ''; 
         const categoryColor = getCategoryColor(id);
         
+        // Animação de entrada
         contentArea.style.opacity = '0';
         loadingSpinner.classList.remove('hidden');
         contentArea.classList.add('hidden'); 
 
         let allQuestions = null;
-        
         try {
             allQuestions = await loadQuestionBank(id);
         } catch(error) {
@@ -316,11 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
             loadingSpinner.classList.add('hidden');
             contentArea.classList.remove('hidden'); 
 
+            // Constrói HTML do conteúdo
             let html = `
                 <h3 class="flex items-center text-3xl mb-6 pb-4 border-b"><i class="${d.iconClass} mr-4 ${categoryColor} fa-fw"></i>${d.title}</h3>
                 <div>${d.content}</div>
             `;
 
+            // Adiciona Quiz se houver
             if (allQuestions && allQuestions.length > 0) {
                 const questionsToDisplay = 4;
                 const count = Math.min(allQuestions.length, questionsToDisplay); 
@@ -338,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     for (const key in q.options) {
                         quizHtml += `<div class="quiz-option" data-module="${id}" data-question-id="${q.id}" data-answer="${key}">
                                         <span class="option-key">${key.toUpperCase()})</span> ${q.options[key]}
+                                        <span class="ripple"></span>
                                     </div>`;
                     }
                     
@@ -352,6 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
                          </div>`;
             }
 
+            // Adiciona Botão de Conclusão e Notas
             html += `
                 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-right">
                     <button class="action-button conclude-button" data-module="${id}">Concluir Módulo</button>
@@ -365,6 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             contentArea.innerHTML = html;
             
+            // Reconfigura listeners para os novos elementos
             setupQuizListeners();
             setupConcludeButtonListener();
             setupNotesListener(id);
@@ -385,9 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
 
-    // --- FUNÇÃO DE ANIMAÇÃO COMPLETA (CONFETE + PARTÍCULAS DOURADAS) ---
+    // --- FUNÇÃO DE ANIMAÇÃO COMPLETA (PARTÍCULAS E CONFETES) ---
     function triggerSuccessParticles(clickEvent, element) {
-      // 1. Confetti
+      // 1. Confetti (Canvas Library)
       if (typeof confetti === 'function') {
         confetti({
           particleCount: 28,
@@ -402,7 +419,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
 
-      // 2. Partículas Douradas (O código que você queria de volta)
+      // 2. Partículas Douradas (DOM Elements)
       const container = document.createElement('div');
       container.className = 'gold-particles-container';
       container.style.position = 'fixed'; 
@@ -414,12 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
       container.style.zIndex = '4000';
       document.body.appendChild(container);
 
-      // Coordenadas
       const rect = (element && element.getBoundingClientRect) ? element.getBoundingClientRect() : { left: window.innerWidth/2, top: window.innerHeight/2, width: 0, height: 0 };
       const cx = rect.left + (rect.width / 2);
       const cy = rect.top + (rect.height / 2);
 
-      // Criar 12 partículas
       for (let i = 0; i < 12; i++) {
         const p = document.createElement('div');
         p.className = 'gold-particle';
@@ -450,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { if (container && container.parentNode) container.remove(); }, 1800);
     }
 
-    // --- FUNÇÃO DE QUIZ (COM ANIMAÇÃO COMPLETA) ---
+    // --- LÓGICA DO QUIZ ---
     function handleQuizOptionClick(e) {
         const o = e.currentTarget;
         if (o.disabled) return;
@@ -477,12 +492,13 @@ document.addEventListener('DOMContentLoaded', () => {
             o.classList.add('correct');
             feedbackContent = `<strong class="font-semibold text-green-700 dark:text-green-400"><i class="fas fa-check-circle mr-2"></i> Correto!</strong> ${explanationText}`;
             try {
-                // CHAMA A ANIMAÇÃO COMPLETA AQUI
+                // Dispara a animação completa
                 triggerSuccessParticles(e, o);
             } catch (err) { console.error(err); }
         } else {
             o.classList.add('incorrect');
-            feedbackContent = `<strong class="font-semibold text-red-700 dark:text-red-400"><i class="fas fa-times-circle mr-2"></i> Incorreto.</strong> ${explanationText}`;
+            feedbackContent = `<strong class="font-semibold text-red-700 dark:text-red-400"><i class="fas fa-times-circle mr-2"></i> Incorreto.</strong> ${explanationText} 
+                                <span class="text-sm italic block mt-1"> (Dica: A resposta correta foi destacada em verde.)</span>`;
         }
         if (feedbackArea) {
             feedbackArea.innerHTML = `<div class="explanation mt-2">${feedbackContent}</div>`;
@@ -526,6 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- FUNÇÕES REUTILIZÁVEIS ---
+
     function goToHomePage() {
         localStorage.removeItem('gateBombeiroLastModule'); 
         
@@ -545,6 +562,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             newBtn.addEventListener('click', () => {
                 loadModuleContent('module1');
+                // Abre o primeiro acordeão na sidebar
                 const firstAccordionButton = document.querySelector('#desktop-module-container .accordion-button');
                 if(firstAccordionButton) {
                      const firstPanel = firstAccordionButton.nextElementSibling;
