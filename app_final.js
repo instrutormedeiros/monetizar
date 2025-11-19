@@ -1,19 +1,47 @@
-/* === ARQUIVO app_final.js (Animação Completa Restaurada) === */
+/* === ARQUIVO app.js (CORREÇÃO FINAL DE TIMING) === */
 
+// ESPERA O HTML ESTAR 100% CARREGADO ANTES DE EXECUTAR QUALQUER COISA
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- VERIFICAÇÃO DE SEGURANÇA ---
+    // --- VERIFICAÇÃO DE SEGURANÇA (Primeira coisa a rodar) ---
+    // (Verifica se data.js e course.js carregaram)
     if (typeof moduleContent === 'undefined' || typeof moduleCategories === 'undefined' || typeof questionSources === 'undefined') {
+        
         document.getElementById('main-header')?.classList.add('hidden');
         document.querySelector('footer')?.classList.add('hidden');
+        document.querySelector('nav.lg\\:hidden')?.classList.add('hidden');
+        document.getElementById('welcome-greeting-container')?.classList.add('hidden');
+        document.getElementById('breadcrumb-container')?.classList.add('hidden');
+        document.getElementById('sticky-progress-wrapper')?.classList.add('hidden');
+
         const contentAreaError = document.getElementById('content-area');
         if (contentAreaError) {
-            contentAreaError.innerHTML = `<div class="text-center p-10"><h2 class="text-2xl text-red-600">Erro Crítico: Dados não carregados.</h2><button onclick="location.reload()" class="mt-4 p-2 bg-blue-500 text-white rounded">Recarregar</button></div>`;
+            contentAreaError.innerHTML = `
+                <div class="text-center py-10 px-6">
+                    <div class="inline-block p-5 bg-red-100 dark:bg-red-900/50 rounded-full mb-6 floating">
+                        <i class="fas fa-exclamation-triangle text-6xl text-red-600"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold mb-4 text-red-700 dark:text-red-300">Erro Crítico de Carregamento</h2>
+                    <p class="text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto mb-8">
+                        O arquivo de dados essencial (<code>data.js</code> ou <code>course.js</code>) não foi encontrado ou está corrompido. 
+                        Verifique se os arquivos estão na mesma pasta que o <code>index.html</code> e se as variáveis estão globais.
+                    </p>
+                    <button onclick="location.reload()" class="action-button pulse text-lg">
+                        <i class="fas fa-sync-alt mr-2"></i> Tentar Recarregar
+                    </button>
+                </div>`;
+            
+            contentAreaError.closest('.bg-white')?.classList.remove('hidden');
+            document.getElementById('loading-spinner')?.classList.add('hidden');
         }
-        return;
+        
+        console.error("Erro: Arquivo data.js ou course.js não carregado ou incompleto (moduleContent, moduleCategories, ou questionSources ausente).");
+        return; // Interrompe a execução
     }
+    // --- FIM DA VERIFICAÇÃO DE SEGURANÇA ---
 
-    // --- VARIÁVEIS GLOBAIS ---
+
+    // --- VARIÁVEIS GLOBAIS DO APP ---
     const contentArea = document.getElementById('content-area');
     const totalModules = Object.keys(moduleContent).length;
     let completedModules = JSON.parse(localStorage.getItem('gateBombeiroCompletedModules_v3')) || [];
@@ -21,19 +49,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentModuleId = null;
     let cachedQuestionBanks = {}; 
 
-    // --- SELETORES ---
+    // --- SELETORES DO DOM ---
     const toastContainer = document.getElementById('toast-container');
     const sidebar = document.getElementById('off-canvas-sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const printWatermark = document.getElementById('print-watermark');
+    const achievementModal = document.getElementById('achievement-modal');
+    const achievementOverlay = document.getElementById('achievement-modal-overlay');
+    const closeAchButton = document.getElementById('close-ach-modal');
     const breadcrumbContainer = document.getElementById('breadcrumb-container');
     const loadingSpinner = document.getElementById('loading-spinner');
+    
+    const resetModal = document.getElementById('reset-modal');
+    const resetOverlay = document.getElementById('reset-modal-overlay');
+    const confirmResetButton = document.getElementById('confirm-reset-button');
+    const cancelResetButton = document.getElementById('cancel-reset-button');
 
-    // --- INICIALIZAÇÃO ---
+    // --- FUNÇÃO PRINCIPAL DE INICIALIZAÇÃO ---
     function init() {
         setupProtection();
         setupTheme();
         
+        // --- INICIALIZAÇÃO DO FIREBASE (SEUS DADOS) ---
         const firebaseConfig = {
           apiKey: "AIzaSyDNet1QC72jr79u8JpnFMLBoPI26Re6o3g",
           authDomain: "projeto-bravo-charlie-app.firebaseapp.com",
@@ -46,28 +83,46 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (typeof FirebaseCourse !== 'undefined') {
             FirebaseCourse.init(firebaseConfig);
+            
+            // Configura os botões de Login/Cadastro
             setupAuthEventListeners(); 
+            
+            // Adiciona listener para o botão de Sair (Logout)
             document.getElementById('logout-button')?.addEventListener('click', FirebaseCourse.signOutUser);
             document.getElementById('logout-expired-button')?.addEventListener('click', FirebaseCourse.signOutUser);
-            FirebaseCourse.checkAuth((user, userData) => onLoginSuccess(user, userData));
-        }
 
+            // O checkAuth agora controla o início do app
+            FirebaseCourse.checkAuth((user, userData) => {
+                onLoginSuccess(user, userData);
+            });
+        }
+        
+        // Configura os listeners de UI que não dependem de login
         setupHeaderScroll();
         setupRippleEffects();
     }
     
+    // --- FUNÇÃO: INICIA O APP APÓS LOGIN VÁLIDO ---
     function onLoginSuccess(user, userData) {
         if (document.body.getAttribute('data-app-ready') === 'true') return;
         document.body.setAttribute('data-app-ready', 'true');
 
+        console.log(`Login bem-sucedido. Iniciando app para ${userData.name}`);
+        
+        // 1. Esconde o modal de login
         document.getElementById('name-prompt-modal')?.classList.remove('show');
         document.getElementById('name-modal-overlay')?.classList.remove('show');
         document.getElementById('expired-modal')?.classList.remove('show');
         
+        // 2. Define a saudação e marca d'água
         const greetingEl = document.getElementById('welcome-greeting');
         if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
-        if (printWatermark) printWatermark.textContent = `Licenciado para ${userData.name} (CPF: ${userData.cpf || '...'}) - Proibida a Cópia`;
+        
+        if (printWatermark) {
+            printWatermark.textContent = `Licenciado para ${userData.name} (CPF: ${userData.cpf || '...'}) - Proibida a Cópia`;
+        }
 
+        // 3. Inicia o resto do app
         document.getElementById('total-modules').textContent = totalModules;
         document.getElementById('course-modules-count').textContent = totalModules;
         
@@ -77,108 +132,165 @@ document.addEventListener('DOMContentLoaded', () => {
         handleInitialLoad();
     }
 
+    // --- FUNÇÃO: LOGIN/CADASTRO COM CPF E PAGAMENTO ---
     function setupAuthEventListeners() {
         const nameField = document.getElementById('name-field-container');
         const cpfField = document.getElementById('cpf-field-container'); 
+        
         const nameInput = document.getElementById('name-input');
         const cpfInput = document.getElementById('cpf-input'); 
         const emailInput = document.getElementById('email-input');
         const passwordInput = document.getElementById('password-input');
         const feedback = document.getElementById('auth-feedback');
+        
         const loginGroup = document.getElementById('login-button-group');
         const signupGroup = document.getElementById('signup-button-group');
         const authTitle = document.getElementById('auth-title');
         const authMsg = document.getElementById('auth-message');
+
         const btnShowLogin = document.getElementById('show-login-button');
         const btnShowSignup = document.getElementById('show-signup-button');
         const btnLogin = document.getElementById('login-button');
         const btnSignup = document.getElementById('signup-button');
+        
+        // Elementos do Modal de Pagamento
         const btnOpenPayLogin = document.getElementById('open-payment-login-btn');
         const btnClosePayModal = document.getElementById('close-payment-modal-btn');
         const expiredModal = document.getElementById('expired-modal');
+        const loginModalOverlay = document.getElementById('name-modal-overlay');
         const loginModal = document.getElementById('name-prompt-modal');
 
+        // --- LÓGICA DO BOTÃO DE PAGAMENTO NA TELA DE LOGIN ---
         btnOpenPayLogin?.addEventListener('click', () => {
-             loginModal.classList.remove('show'); 
-             expiredModal.classList.add('show'); 
+             loginModal.classList.remove('show'); // Esconde login
+             expiredModal.classList.add('show'); // Mostra pagamento
+             loginModalOverlay.classList.add('show'); // Mantém fundo escuro
+             
+             // Ajusta o modal de expirado para permitir voltar
              btnClosePayModal.classList.remove('hidden');
-        });
-        btnClosePayModal?.addEventListener('click', () => {
-             expiredModal.classList.remove('show'); 
-             loginModal.classList.add('show'); 
+             document.getElementById('expired-text-msg').textContent = "Confira nossos planos e realize o pagamento para ativar ou renovar seu acesso.";
         });
 
+        btnClosePayModal?.addEventListener('click', () => {
+             expiredModal.classList.remove('show'); // Esconde pagamento
+             loginModal.classList.add('show'); // Volta pro login
+        });
+
+        // Alternar para modo CADASTRO
         btnShowSignup?.addEventListener('click', () => {
             loginGroup.classList.add('hidden');
             signupGroup.classList.remove('hidden');
             nameField.classList.remove('hidden');
-            cpfField.classList.remove('hidden'); 
+            cpfField.classList.remove('hidden'); // Mostra CPF
             authTitle.textContent = "Criar Nova Conta";
-            authMsg.textContent = "Preencha seus dados para iniciar o trial.";
+            authMsg.textContent = "Preencha seus dados para iniciar o trial de 30 dias.";
             feedback.textContent = "";
         });
         
+        // Alternar para modo LOGIN
         btnShowLogin?.addEventListener('click', () => {
             loginGroup.classList.remove('hidden');
             signupGroup.classList.add('hidden');
             nameField.classList.add('hidden');
-            cpfField.classList.add('hidden'); 
+            cpfField.classList.add('hidden'); // Esconde CPF
             authTitle.textContent = "Acessar Plataforma";
-            authMsg.textContent = "Entre com seu e-mail e senha.";
+            authMsg.textContent = "Entre com seu e-mail e senha para continuar.";
             feedback.textContent = "";
         });
         
+        // Ação de LOGIN
         btnLogin?.addEventListener('click', async () => {
             const email = emailInput.value;
             const password = passwordInput.value;
             if (!email || !password) {
-                feedback.textContent = "Preencha e-mail e senha.";
+                feedback.textContent = "Por favor, preencha e-mail e senha.";
                 return;
             }
             feedback.textContent = "Entrando...";
+            feedback.className = "text-sm mt-4 text-blue-600 font-semibold";
+            
             try {
-                localStorage.removeItem('my_session_id'); 
+                localStorage.removeItem('my_session_id'); // Limpa sessão anterior
                 await FirebaseCourse.signInWithEmail(email, password);
                 feedback.textContent = "Verificando acesso...";
             } catch (error) {
-                feedback.textContent = "Erro ao entrar: Verifique seus dados.";
+                console.error("Erro de Login:", error.code);
+                feedback.className = "text-sm mt-4 text-red-600 font-semibold";
+                if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+                    feedback.textContent = "E-mail ou senha incorretos.";
+                } else if (error.code === 'auth/too-many-requests') {
+                    feedback.textContent = "Muitas tentativas. Aguarde um pouco.";
+                } else {
+                    feedback.textContent = "Erro ao entrar: " + error.message;
+                }
             }
         });
         
+        // Ação de CADASTRO
         btnSignup?.addEventListener('click', async () => {
             const name = nameInput.value;
             const email = emailInput.value;
             const password = passwordInput.value;
             const cpf = cpfInput.value;
+            
             if (!name || !email || !password || !cpf) {
-                feedback.textContent = "Preencha todos os campos.";
+                feedback.textContent = "Por favor, preencha todos os campos (Nome, CPF, Email, Senha).";
                 return;
             }
-            feedback.textContent = "Criando conta...";
+            if (password.length < 6) {
+                feedback.textContent = "A senha deve ter no mínimo 6 caracteres.";
+                return;
+            }
+            
+            feedback.textContent = "Verificando dados...";
+            feedback.className = "text-sm mt-4 text-blue-600 font-semibold";
+
             try {
                 await FirebaseCourse.signUpWithEmail(name, email, password, cpf);
                 feedback.textContent = "Conta criada! Iniciando...";
             } catch (error) {
-                feedback.textContent = error.message;
+                console.error("Erro de Cadastro:", error);
+                feedback.className = "text-sm mt-4 text-red-600 font-semibold";
+                
+                if (error.code === 'auth/email-already-in-use') {
+                    feedback.textContent = "Este e-mail já está em uso. Faça login.";
+                } else if (error.message.includes("CPF")) {
+                    feedback.textContent = error.message; 
+                } else {
+                    feedback.textContent = "Erro ao criar conta: " + error.message;
+                }
             }
         });
     }
 
+    // --- Lógica de Carregamento Inicial ---
     function handleInitialLoad() {
         const lastModule = localStorage.getItem('gateBombeiroLastModule');
-        if (lastModule) loadModuleContent(lastModule);
-        else goToHomePage();
-    }
-
-    async function loadQuestionBank(moduleId) {
-        if (cachedQuestionBanks[moduleId]) return cachedQuestionBanks[moduleId];
-        if (typeof QUIZ_DATA !== 'undefined' && QUIZ_DATA[moduleId]) {
-            cachedQuestionBanks[moduleId] = QUIZ_DATA[moduleId];
-            return QUIZ_DATA[moduleId];
+        if (lastModule) {
+            loadModuleContent(lastModule);
+        } else {
+            goToHomePage();
         }
-        return null;
     }
 
+    // --- LAZY LOADING DE PERGUNTAS ---
+    async function loadQuestionBank(moduleId) {
+        if (cachedQuestionBanks[moduleId]) {
+            return cachedQuestionBanks[moduleId];
+        }
+        if (typeof QUIZ_DATA === 'undefined') {
+            console.error("Erro fatal: quizzes.js não carregou ou 'QUIZ_DATA' não está definido.");
+            return null;
+        }
+        const questions = QUIZ_DATA[moduleId];
+        if (!questions || !Array.isArray(questions) || questions.length === 0) {
+            return null; 
+        }
+        cachedQuestionBanks[moduleId] = questions;
+        return questions;
+    }
+
+    // --- FUNÇÃO DE CARREGAR MÓDULO ---
     async function loadModuleContent(id) {
         if (!id || !moduleContent[id]) return;
         currentModuleId = id;
@@ -192,7 +304,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingSpinner.classList.remove('hidden');
         contentArea.classList.add('hidden'); 
 
-        let allQuestions = await loadQuestionBank(id);
+        let allQuestions = null;
+        
+        try {
+            allQuestions = await loadQuestionBank(id);
+        } catch(error) {
+             console.error("Erro no carregamento do quiz:", error);
+        }
         
         setTimeout(() => {
             loadingSpinner.classList.add('hidden');
@@ -204,21 +322,34 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
 
             if (allQuestions && allQuestions.length > 0) {
-                const count = Math.min(allQuestions.length, 4); 
-                const shuffled = shuffleArray(allQuestions).slice(0, count);
+                const questionsToDisplay = 4;
+                const count = Math.min(allQuestions.length, questionsToDisplay); 
+                const shuffledQuestions = shuffleArray(allQuestions);
+                const selectedQuestions = shuffledQuestions.slice(0, count);
+
                 let quizHtml = `<hr><h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Exercícios de Fixação</h3>`;
-                shuffled.forEach((q, index) => {
+                
+                selectedQuestions.forEach((q, index) => {
+                    const questionNumber = index + 1;
                     quizHtml += `<div class="quiz-block" data-question-id="${q.id}">
-                                    <p class="font-semibold mt-4 mb-2 text-gray-700 dark:text-gray-200">${index + 1}. ${q.question}</p>
+                                    <p class="font-semibold mt-4 mb-2 text-gray-700 dark:text-gray-200">${questionNumber}. ${q.question}</p>
                                     <div class="quiz-options-group space-y-2 mb-4">`;
+                    
                     for (const key in q.options) {
                         quizHtml += `<div class="quiz-option" data-module="${id}" data-question-id="${q.id}" data-answer="${key}">
                                         <span class="option-key">${key.toUpperCase()})</span> ${q.options[key]}
                                     </div>`;
                     }
+                    
                     quizHtml += `</div><div id="feedback-${q.id}" class="feedback-area hidden"></div></div>`;
                 });
+                
                 html += quizHtml;
+            } else {
+                html += `<div class="warning-box mt-8">
+                            <p><strong><i class="fas fa-exclamation-triangle mr-2"></i> Exercícios não encontrados.</strong></p>
+                            <p>Não foi possível encontrar as perguntas de fixação para este módulo.</p>
+                         </div>`;
             }
 
             html += `
@@ -226,23 +357,31 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="action-button conclude-button" data-module="${id}">Concluir Módulo</button>
                 </div>
                 <div class="mt-10 pt-6 border-t-2 border-dashed border-gray-200 dark:border-gray-700">
-                    <h4 class="text-xl font-bold mb-3 text-secondary dark:text-gray-200">Anotações Pessoais</h4>
+                    <h4 class="text-xl font-bold mb-3 text-secondary dark:text-gray-200"><i class="fas fa-pencil-alt mr-2"></i>Anotações Pessoais</h4>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">Suas notas para este módulo. Elas são salvas automaticamente no seu navegador.</p>
                     <textarea id="notes-module-${id}" class="notes-textarea" placeholder="Digite suas anotações aqui...">${savedNote}</textarea>
-                </div>`;
+                </div>
+            `;
 
             contentArea.innerHTML = html;
+            
             setupQuizListeners();
             setupConcludeButtonListener();
             setupNotesListener(id);
             
             contentArea.style.opacity = '1';
             contentArea.style.transition = 'opacity 0.3s ease';
+            
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            
             updateActiveModuleInList();
             updateNavigationButtons();
             updateBreadcrumbs(d.title);
+            
             document.getElementById('module-nav').classList.remove('hidden');
             closeSidebar();
+            document.getElementById('next-module')?.classList.remove('blinking-button');
+
         }, 300);
     }
 
@@ -311,6 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => { if (container && container.parentNode) container.remove(); }, 1800);
     }
 
+    // --- FUNÇÃO DE QUIZ (COM ANIMAÇÃO COMPLETA) ---
     function handleQuizOptionClick(e) {
         const o = e.currentTarget;
         if (o.disabled) return;
@@ -321,175 +461,579 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!questionData) return; 
         
         const correctAnswer = questionData.answer;
-        const feedbackArea = document.getElementById(`feedback-${questionId}`);
+        const explanationText = questionData.explanation || 'Nenhuma explicação disponível.';
         const optionsGroup = o.closest('.quiz-options-group');
+        const feedbackArea = document.getElementById(`feedback-${questionId}`);
         
         optionsGroup.querySelectorAll(`.quiz-option[data-question-id="${questionId}"]`).forEach(opt => {
             opt.disabled = true;
-            if (opt.dataset.answer === correctAnswer) opt.classList.add('correct');
+            if (opt.dataset.answer === correctAnswer) {
+                opt.classList.add('correct');
+            }
         });
         
+        let feedbackContent = '';
         if (selectedAnswer === correctAnswer) {
             o.classList.add('correct');
-            feedbackArea.innerHTML = `<div class="explanation mt-2 text-green-600 font-bold"><i class="fas fa-check-circle"></i> Correto! ${questionData.explanation}</div>`;
-            triggerSuccessParticles(e, o); // CHAMA A ANIMAÇÃO COMPLETA
+            feedbackContent = `<strong class="font-semibold text-green-700 dark:text-green-400"><i class="fas fa-check-circle mr-2"></i> Correto!</strong> ${explanationText}`;
+            try {
+                // CHAMA A ANIMAÇÃO COMPLETA AQUI
+                triggerSuccessParticles(e, o);
+            } catch (err) { console.error(err); }
         } else {
             o.classList.add('incorrect');
-            feedbackArea.innerHTML = `<div class="explanation mt-2 text-red-600 font-bold"><i class="fas fa-times-circle"></i> Incorreto. ${questionData.explanation}</div>`;
+            feedbackContent = `<strong class="font-semibold text-red-700 dark:text-red-400"><i class="fas fa-times-circle mr-2"></i> Incorreto.</strong> ${explanationText}`;
         }
-        feedbackArea.classList.remove('hidden');
+        if (feedbackArea) {
+            feedbackArea.innerHTML = `<div class="explanation mt-2">${feedbackContent}</div>`;
+            feedbackArea.classList.remove('hidden');
+        }
     }
     
+    // --- FUNÇÃO DE BREADCRUMBS ---
     function updateBreadcrumbs(moduleTitle = 'Início') {
-        const bc = document.getElementById('breadcrumb-container');
-        bc.innerHTML = `<a href="#" id="home-breadcrumb" class="text-blue-500 hover:underline">Início</a> / ${moduleTitle}`;
-        document.getElementById('home-breadcrumb')?.addEventListener('click', (e) => { e.preventDefault(); goToHomePage(); });
+        const homeLink = `<a href="#" id="home-breadcrumb" class="text-blue-600 dark:text-blue-400 hover:text-orange-500 transition-colors"><i class="fas fa-home mr-1"></i> Início</a>`;
+        if (!currentModuleId) {
+            breadcrumbContainer.innerHTML = homeLink;
+        } else {
+            const category = Object.values(moduleCategories).find(cat => {
+                const moduleNum = parseInt(currentModuleId.replace('module', ''));
+                return moduleNum >= cat.range[0] && moduleNum <= cat.range[1];
+            });
+            if (category) {
+                const categoryLink = `<span class="mx-2 text-gray-400">/</span> <span class="font-bold text-gray-700 dark:text-gray-300">${category.title}</span>`;
+                const moduleSpan = `<span class="mx-2 text-gray-400">/</span> <span class="text-orange-500">${moduleTitle}</span>`;
+                breadcrumbContainer.innerHTML = `${homeLink} ${categoryLink} ${moduleSpan}`;
+            } else {
+                breadcrumbContainer.innerHTML = `${homeLink} <span class="mx-2 text-gray-400">/</span> ${moduleTitle}`;
+            }
+        }
+        document.getElementById('home-breadcrumb')?.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            goToHomePage();
+        });
     }
     
+    // --- FUNÇÕES DE UTILIDADE ---
     function setupNotesListener(id) {
-        const el = document.getElementById(`notes-module-${id}`);
-        if (el) el.addEventListener('keyup', () => localStorage.setItem('note-' + id, el.value));
+        const notesTextarea = document.getElementById(`notes-module-${id}`);
+        if (notesTextarea) {
+            notesTextarea.style.userSelect = 'auto';
+            notesTextarea.addEventListener('keyup', () => {
+                localStorage.setItem('note-' + id, notesTextarea.value);
+            });
+        }
     }
 
+    // --- FUNÇÕES REUTILIZÁVEIS ---
     function goToHomePage() {
         localStorage.removeItem('gateBombeiroLastModule'); 
-        contentArea.innerHTML = `<div class="text-center py-10"><h2 class="text-3xl font-bold text-blue-900 dark:text-white">Bem-vindo ao Curso</h2><p class="mb-6 text-gray-600">Selecione um módulo para começar.</p><button id="start-course" class="action-button">Iniciar</button></div>`;
+        
+        if (contentArea) {
+            contentArea.innerHTML = getWelcomeContent();
+        }
         document.getElementById('module-nav')?.classList.add('hidden');
-        document.getElementById('start-course')?.addEventListener('click', () => loadModuleContent('module1'));
+        document.querySelectorAll('.module-list-item.active').forEach(i => i.classList.remove('active'));
+        currentModuleId = null;
+        closeSidebar();
+        document.getElementById('next-module')?.classList.remove('blinking-button');
+        
+        const btn = document.getElementById('start-course');
+        if (btn) {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', () => {
+                loadModuleContent('module1');
+                const firstAccordionButton = document.querySelector('#desktop-module-container .accordion-button');
+                if(firstAccordionButton) {
+                     const firstPanel = firstAccordionButton.nextElementSibling;
+                     if (firstPanel) {
+                         firstAccordionButton.classList.add('active');
+                         firstPanel.style.maxHeight = firstPanel.scrollHeight + "px";
+                     }
+                }
+            });
+        }
+        updateBreadcrumbs();
+    }
+
+    function getWelcomeContent() {
+        return `<div class="text-center py-8">
+                        <div class="floating inline-block p-5 bg-red-100 dark:bg-red-900/50 rounded-full mb-6"><i class="fas fa-fire-extinguisher text-6xl text-red-600"></i></div>
+                        <h2 class="text-4xl font-bold mb-4 text-blue-900 dark:text-white">Torne-se um Profissional de Elite</h2>
+                        <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-8">
+                            Bem-vindo ao <strong class="font-bold text-orange-500 dark:text-orange-400">Curso de Formação para Bombeiro Civil e Brigadista</strong>.
+                        </p>
+                        <button id="start-course" class="action-button pulse text-lg"><i class="fas fa-play-circle mr-2"></i> Iniciar Curso Agora</button>
+                    </div>`;
     }
 
     function setupProtection() {
+        document.body.style.userSelect = 'none';
         document.addEventListener('contextmenu', e => e.preventDefault());
+        document.addEventListener('keydown', e => {
+          if (e.ctrlKey || e.metaKey) {
+            if (['c','a','x','v','s','p','u'].includes(e.key.toLowerCase())) e.preventDefault();
+          }
+          if (e.key === 'F12') e.preventDefault();
+          if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+            e.preventDefault();
+          }
+        });
+        document.querySelectorAll('img').forEach(img => {
+          img.draggable = false;
+          img.addEventListener('dragstart', e => e.preventDefault());
+        });
     }
 
     function setupTheme() {
-        const isDark = localStorage.getItem('theme') === 'dark';
+        const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.classList.toggle('dark', isDark);
+        updateThemeIcons();
     }
-
     function toggleTheme() {
         document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        updateThemeIcons();
+    }
+    function updateThemeIcons() {
+        const icon = document.documentElement.classList.contains('dark') ? 'fa-sun' : 'fa-moon';
+        document.querySelectorAll('#dark-mode-toggle-desktop i, #bottom-nav-theme i').forEach(i => i.className = `fas ${icon} text-2xl`);
     }
 
     function shuffleArray(array) {
-        return array.sort(() => Math.random() - 0.5);
+        let newArray = [...array]; 
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
     }
     
     function getCategoryColor(moduleId) {
-        return 'text-orange-500'; 
+        if (!moduleId) return 'text-gray-500'; 
+        const num = parseInt(moduleId.replace('module', ''));
+        
+        for (const key in moduleCategories) {
+            const cat = moduleCategories[key];
+            if (num >= cat.range[0] && num <= cat.range[1]) {
+                switch (key) {
+                    case 'rh': return 'text-orange-500'; 
+                    case 'legislacao': return 'text-orange-500'; 
+                    case 'salvamento': return 'text-blue-500'; 
+                    case 'pci': return 'text-red-500'; 
+                    case 'aph_novo': return 'text-green-500'; 
+                    case 'nr33': return 'text-teal-500';       
+                    case 'nr35': return 'text-indigo-500'; 
+                    default: return 'text-gray-500';
+                }
+            }
+        }
+        return 'text-gray-500';
     }
     
     function closeSidebar() {
         if (sidebar) sidebar.classList.remove('open');
-        if (sidebarOverlay) sidebarOverlay.classList.remove('show');
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('show');
+            setTimeout(() => sidebarOverlay.classList.add('hidden'), 300);
+        }
     }
     function openSidebar() {
         if (sidebar) sidebar.classList.add('open');
-        if (sidebarOverlay) sidebarOverlay.classList.add('show');
+        if (sidebarOverlay) {
+            sidebarOverlay.classList.remove('hidden');
+            setTimeout(() => sidebarOverlay.classList.add('show'), 10);
+        }
     }
     function populateModuleLists() {
         document.getElementById('desktop-module-container').innerHTML = getModuleListHTML();
         document.getElementById('mobile-module-container').innerHTML = getModuleListHTML();
     }
     function getModuleListHTML() {
-        let html = `<div class="space-y-2">`;
-        for (const k in moduleCategories) {
-            const cat = moduleCategories[k];
-            html += `<button class="accordion-button w-full text-left p-3 bg-gray-100 dark:bg-gray-700 rounded font-bold">${cat.title}</button><div class="accordion-panel hidden p-2">`;
-            for (let i = cat.range[0]; i <= cat.range[1]; i++) {
-                const m = moduleContent[`module${i}`];
-                if(m) html += `<div class="module-list-item p-2 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600 rounded" data-module="${m.id}">${m.title}</div>`;
+    let html = `<h2 class="text-2xl font-semibold mb-5 flex items-center text-blue-900 dark:text-white"><i class="fas fa-list-ul mr-3 text-orange-500"></i> Conteúdo do Curso</h2>
+                    <div class="mb-4 relative"><input type="text" class="module-search w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 dark:bg-gray-700" placeholder="Buscar módulo."><i class="fas fa-search absolute right-3 top-3.5 text-gray-400"></i></div>
+                    <div class="module-accordion-container space-y-2">`;
+
+    for (const k in moduleCategories) {
+        const cat = moduleCategories[k];
+        html += `<div><button class="accordion-button"><span><i class="${cat.icon} w-6 mr-2 text-gray-500"></i>${cat.title}</span><i class="fas fa-chevron-down"></i></button><div class="accordion-panel">`;
+        for (let i = cat.range[0]; i <= cat.range[1]; i++) {
+            const m = moduleContent[`module${i}`];
+            if (m) {
+                const isDone = Array.isArray(completedModules) && completedModules.includes(m.id);
+                html += `<div class="module-list-item${isDone ? ' completed' : ''}" data-module="${m.id}">
+                            <i class="${m.iconClass} module-icon"></i>
+                            <span style="flex:1">${m.title}</span>
+                            ${isDone ? '<i class="fas fa-check-circle completion-icon" aria-hidden="true"></i>' : ''}
+                         </div>`;
             }
-            html += `</div>`;
         }
-        return html + `</div>`;
+        html += `</div></div>`;
     }
 
+    html += `</div>`;
+    html += `<div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700"><h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Conquistas por Área</h3><div id="achievements-grid" class="grid grid-cols-2 gap-4">`;
+    for (const key in moduleCategories) {
+        const cat = moduleCategories[key];
+        html += `<div id="ach-cat-${key}" class="achievement" title="Conclua a área para ganhar: ${cat.achievementTitle}"><div class="achievement-icon"><i class="${cat.icon}"></i></div><p class="text-sm font-bold text-gray-700 dark:text-gray-300">${cat.achievementTitle}</p></div>`;
+    }
+    html += `</div></div>`;
+    return html;
+}
+
     function updateProgress() {
-        const p = ((completedModules.length / totalModules) * 100).toFixed(0);
-        document.getElementById('progress-text').textContent = `${p}%`;
-        document.getElementById('progress-bar-minimal').style.width = `${p}%`;
+        const p = (completedModules.length / totalModules) * 100;
+        
+        const progressTextEl = document.getElementById('progress-text');
+        if (progressTextEl) progressTextEl.textContent = `${p.toFixed(0)}%`;
+        
+        const completedCountEl = document.getElementById('completed-modules-count');
+        if (completedCountEl) completedCountEl.textContent = completedModules.length;
+        
+        const progressBarMinimal = document.getElementById('progress-bar-minimal');
+        if (progressBarMinimal) {
+            progressBarMinimal.style.width = `${p}%`;
+        }
+        
+        updateModuleListStyles();
+        checkAchievements();
+        if (totalModules > 0 && completedModules.length === totalModules) showCongratulations();
+    }
+
+    function showCongratulations() {
+        document.getElementById('congratulations-modal')?.classList.add('show');
+        document.getElementById('modal-overlay')?.classList.add('show');
+        if(typeof confetti === 'function') {
+            confetti({particleCount:150, spread:90, origin:{y:0.6},zIndex:200});
+        }
+    }
+    function showAchievementToast(title) {
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = `<i class="fas fa-trophy"></i><div><p class="font-bold">Módulo Concluído!</p><p class="text-sm">${title}</p></div>`;
+        if (toastContainer) {
+            toastContainer.appendChild(toast);
+        }
+        setTimeout(() => toast.remove(), 4500);
+    }
+    function updateModuleListStyles() {
+        document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('completed', completedModules.includes(i.dataset.module)));
+    }
+    function checkAchievements() {
+        let newNotification = false;
+        for(const key in moduleCategories) {
+            const cat = moduleCategories[key];
+            let allComplete = true;
+            for(let i = cat.range[0]; i <= cat.range[1]; i++) {
+                if (!moduleContent[`module${i}`] || !completedModules.includes(`module${i}`)) {
+                    allComplete = false; break;
+                }
+            }
+            
+            if (allComplete && !notifiedAchievements.includes(key)) {
+                showAchievementModal(cat.achievementTitle, cat.icon);
+                notifiedAchievements.push(key);
+                newNotification = true;
+            }
+            
+            document.querySelectorAll(`#ach-cat-${key}`).forEach(el => el.classList.toggle('unlocked', allComplete));
+        }
+        if (newNotification) {
+            localStorage.setItem('gateBombeiroNotifiedAchievements_v3', JSON.stringify(notifiedAchievements));
+        }
+    }
+    function showAchievementModal(title, iconClass) {
+        const iconContainer = document.getElementById('ach-modal-icon-container');
+        const titleEl = document.getElementById('ach-modal-title');
+        if (!achievementModal || !achievementOverlay || !iconContainer || !titleEl) return;
+
+        iconContainer.innerHTML = `<i class="${iconClass}"></i>`;
+        titleEl.textContent = `Conquista: ${title}`;
+        achievementModal.classList.add('show');
+        achievementOverlay.classList.add('show');
+        
+        if(typeof confetti === 'function') {
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }, zIndex: 103 });
+        }
+    }
+    function hideAchievementModal() {
+        achievementModal?.classList.remove('show');
+        achievementOverlay?.classList.remove('show');
+    }
+
+    function toggleFocusMode() {
+        const isEnteringFocusMode = !document.body.classList.contains('focus-mode');
+        document.body.classList.toggle('focus-mode');
+        
+        if (!isEnteringFocusMode) {
+            closeSidebar();
+        }
     }
 
     function setupConcludeButtonListener() {
+        if (!currentModuleId) return;
         const b = document.querySelector(`.conclude-button[data-module="${currentModuleId}"]`);
         if(b) {
+            if (concludeButtonClickListener) {
+                b.removeEventListener('click', concludeButtonClickListener);
+            }
+
             if(completedModules.includes(currentModuleId)){
-                b.disabled=true; b.textContent='Concluído';
+                b.disabled=true;
+                b.innerHTML='<i class="fas fa-check-circle mr-2"></i> Concluído';
             } else {
-                b.onclick = () => handleConcludeButtonClick(b);
+                b.disabled = false;
+                b.innerHTML = 'Concluir Módulo';
+                concludeButtonClickListener = () => handleConcludeButtonClick(b);
+                b.addEventListener('click', concludeButtonClickListener);
             }
         }
     }
+    let concludeButtonClickListener = null;
     function handleConcludeButtonClick(b) {
-        if (!completedModules.includes(currentModuleId)) {
-            completedModules.push(currentModuleId);
+        const id = b.dataset.module;
+        if (id && !completedModules.includes(id)) {
+            completedModules.push(id);
             localStorage.setItem('gateBombeiroCompletedModules_v3', JSON.stringify(completedModules));
             updateProgress();
-            b.disabled = true; b.textContent = 'Concluído';
-            if(typeof confetti === 'function') confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            b.disabled = true;
+            b.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Concluído';
+            showAchievementToast(moduleContent[id].title);
+            if(typeof confetti === 'function') {
+                confetti({ particleCount: 60, spread: 70, origin: { y: 0.6 }, zIndex: 2000 });
+            }
+
+            setTimeout(() => {
+                const navContainer = document.getElementById('module-nav');
+                const nextButton = document.getElementById('next-module');
+                if (navContainer) {
+                    navContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    if (nextButton && !nextButton.disabled) {
+                        nextButton.classList.add('blinking-button');
+                    }
+                }
+            }, 700);
         }
     }
-
     function updateActiveModuleInList() {
-        document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('bg-orange-100', i.dataset.module === currentModuleId));
+        document.querySelectorAll('.module-list-item').forEach(i => i.classList.toggle('active', i.dataset.module === currentModuleId));
     }
-    
     function updateNavigationButtons() {
-        const prev = document.getElementById('prev-module');
-        const next = document.getElementById('next-module');
+        const prevModule = document.getElementById('prev-module');
+        const nextModule = document.getElementById('next-module');
+        if (!prevModule || !nextModule) return;
+
+        if (!currentModuleId) {
+             prevModule.disabled = true;
+             nextModule.disabled = true;
+             return;
+        }
         const n = parseInt(currentModuleId.replace('module',''));
-        if(prev) prev.disabled = n === 1;
-        if(next) next.disabled = n === totalModules;
+        prevModule.disabled = (n === 1);
+        nextModule.disabled = (n === totalModules);
     }
-    
     function setupQuizListeners() {
         document.querySelectorAll('.quiz-option').forEach(o => o.addEventListener('click', handleQuizOptionClick));
     }
 
+    // --- FUNÇÃO ADDEVENTLISTENERS ---
     function addEventListeners() {
+        const nextButton = document.getElementById('next-module');
+        const prevButton = document.getElementById('prev-module');
+        const homeButtonDesktop = document.getElementById('home-button-desktop');
+        const homeButtonBottom = document.getElementById('bottom-nav-home');
+        
         document.body.addEventListener('click', e => {
-            if (e.target.closest('.module-list-item')) {
-                loadModuleContent(e.target.closest('.module-list-item').dataset.module);
+            const moduleItem = e.target.closest('.module-list-item');
+            if (moduleItem) {
+                loadModuleContent(moduleItem.dataset.module);
+                nextButton?.classList.remove('blinking-button');
             }
-            if (e.target.classList.contains('accordion-button')) {
-                e.target.nextElementSibling.classList.toggle('hidden');
+            if (e.target.closest('.accordion-button')) {
+                const b = e.target.closest('.accordion-button');
+                const p = b.nextElementSibling;
+                if (!p) return;
+                const isActive = b.classList.contains('active');
+                const allPanels = b.closest('.module-accordion-container, .sidebar, #mobile-module-container').querySelectorAll('.accordion-panel');
+                allPanels.forEach(op => {
+                    if (op !== p && op.previousElementSibling) {
+                         op.style.maxHeight = null;
+                         op.previousElementSibling.classList.remove('active');
+                    }
+                });
+                if (!isActive) {
+                    b.classList.add('active');
+                    p.style.maxHeight = p.scrollHeight + "px";
+                } else {
+                    b.classList.remove('active');
+                    p.style.maxHeight = null;
+                }
             }
         });
-        document.getElementById('prev-module')?.addEventListener('click', () => {
+        
+        prevButton?.addEventListener('click', () => {
+            if (!currentModuleId) return;
             const n = parseInt(currentModuleId.replace('module',''));
             if(n > 1) loadModuleContent(`module${n-1}`);
+            nextButton?.classList.remove('blinking-button');
         });
-        document.getElementById('next-module')?.addEventListener('click', () => {
+        nextButton?.addEventListener('click', () => {
+            if (!currentModuleId) return;
             const n = parseInt(currentModuleId.replace('module',''));
             if(n < totalModules) loadModuleContent(`module${n+1}`);
+            nextButton?.classList.remove('blinking-button');
         });
         
         document.getElementById('mobile-menu-button')?.addEventListener('click', openSidebar);
         document.getElementById('close-sidebar-button')?.addEventListener('click', closeSidebar);
-        document.getElementById('home-button-desktop')?.addEventListener('click', goToHomePage);
+        sidebarOverlay?.addEventListener('click', closeSidebar);
+        
+        homeButtonDesktop?.addEventListener('click', goToHomePage);
+        homeButtonBottom?.addEventListener('click', goToHomePage);
+        
+        document.getElementById('bottom-nav-modules')?.addEventListener('click', openSidebar);
+        document.getElementById('bottom-nav-theme')?.addEventListener('click', toggleTheme);
         document.getElementById('dark-mode-toggle-desktop')?.addEventListener('click', toggleTheme);
-    }
+        
+        document.getElementById('focus-mode-toggle')?.addEventListener('click', toggleFocusMode);
+        document.getElementById('bottom-nav-focus')?.addEventListener('click', toggleFocusMode);
+        document.getElementById('focus-menu-modules')?.addEventListener('click', openSidebar);
+        document.getElementById('focus-menu-exit')?.addEventListener('click', toggleFocusMode);
+        document.getElementById('focus-nav-modules')?.addEventListener('click', openSidebar);
+        document.getElementById('focus-nav-exit')?.addEventListener('click', toggleFocusMode);
 
-    function setupHeaderScroll() {
-        window.addEventListener('scroll', () => {
-            const h = document.getElementById('main-header');
-            if(window.scrollY > 50) h.classList.add('shadow-md'); else h.classList.remove('shadow-md');
+        const congratsModal = document.getElementById('congratulations-modal');
+        const modalOverlay = document.getElementById('modal-overlay');
+        
+        document.getElementById('close-congrats')?.addEventListener('click', () => {
+            if (congratsModal) congratsModal.classList.remove('show');
+            if (modalOverlay) modalOverlay.classList.remove('show');
         });
+        modalOverlay?.addEventListener('click', () => {
+            if (congratsModal) congratsModal.classList.remove('show');
+            if (modalOverlay) modalOverlay.classList.remove('show');
+        });
+        
+        closeAchButton?.addEventListener('click', hideAchievementModal);
+        achievementOverlay?.addEventListener('click', hideAchievementModal);
+
+
+        document.body.addEventListener('input', e => {
+            if(e.target.matches('.module-search')) {
+                const s = e.target.value.toLowerCase();
+                const container = e.target.closest('div.relative');
+                if (container) {
+                    const accordionContainer = container.nextElementSibling;
+                    if (accordionContainer) {
+                         accordionContainer.querySelectorAll('.module-list-item').forEach(i => {
+                            i.style.display = i.textContent.toLowerCase().includes(s) ? 'flex' : 'none';
+                        });
+                    }
+                }
+            }
+        });
+
+        const resetButton = document.getElementById('reset-progress');
+        resetButton?.addEventListener('click', () => {
+             resetModal?.classList.add('show');
+             resetOverlay?.classList.add('show');
+        });
+        
+        cancelResetButton?.addEventListener('click', () => {
+            resetModal?.classList.remove('show');
+            resetOverlay?.classList.remove('show');
+        });
+
+        confirmResetButton?.addEventListener('click', () => {
+            localStorage.removeItem('gateBombeiroCompletedModules_v3');
+            localStorage.removeItem('gateBombeiroNotifiedAchievements_v3');
+            
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('note-')) {
+                    localStorage.removeItem(key);
+                }
+            });
+            
+            alert('Progresso local resetado.');
+            window.location.reload();
+        });
+        
+        const backToTopButton = document.getElementById('back-to-top');
+        if (backToTopButton) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 300) {
+                    backToTopButton.style.display = 'flex';
+                    setTimeout(() => {
+                        backToTopButton.style.opacity = '1';
+                        backToTopButton.style.transform = 'translateY(0)';
+                    }, 10);
+                } else {
+                    backToTopButton.style.opacity = '0';
+                    backToTopButton.style.transform = 'translateY(20px)';
+                    setTimeout(() => {
+                        backToTopButton.style.display = 'none';
+                    }, 300);
+                }
+            });
+
+            backToTopButton.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+        }
     }
 
+    // ===== HEADER SCROLL EFFECT =====
+    function setupHeaderScroll() {
+        const header = document.getElementById('main-header');
+        if (header) {
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) header.classList.add('scrolled');
+                else header.classList.remove('scrolled');
+            });
+        }
+    }
+
+    // ===== EFEITO RIPPLE =====
     function setupRippleEffects() {
-        document.addEventListener('click', e => {
-            const t = e.target.closest('.action-button');
-            if(t) {
-                const r = document.createElement('span');
-                r.classList.add('ripple');
-                t.appendChild(r);
-                setTimeout(() => r.remove(), 600);
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.action-button');
+            if (btn) {
+                const oldRipple = btn.querySelector('.ripple');
+                if (oldRipple) oldRipple.remove();
+
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                const rect = btn.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+                ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+
+                btn.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            }
+
+            const option = e.target.closest('.quiz-option');
+            if (option) {
+                const oldRipple = option.querySelector('.ripple');
+                if (oldRipple) oldRipple.remove();
+
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                const rect = option.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.width = ripple.style.height = size + 'px';
+                ripple.style.left = e.clientX - rect.left - size / 2 + 'px';
+                ripple.style.top = e.clientY - rect.top - size / 2 + 'px';
+
+                option.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
             }
         });
     }
 
+    // --- INICIALIZAÇÃO DO APP ---
     init();
 });
