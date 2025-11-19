@@ -3,171 +3,300 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Curso de Formação | Bombeiro Civil</title>
+    <title>Curso de Formação | Bombeiro Civil e Brigadista</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class' }</script>
+    <script>
+      tailwind.config = { darkMode: 'class' }
+    </script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
     <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="style.css">
 
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js" defer></script>
 </head>
-<body class="antialiased text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+<body class="antialiased">
 
-    <div id="print-watermark" class="hidden print:block fixed top-0 left-0 w-full h-full flex items-center justify-center opacity-10 text-6xl rotate-45 pointer-events-none"></div>
-    <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+    <div id="print-watermark" style="display: none;"></div>
+    <div id="toast-container"></div>
     
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden transition-opacity"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-60 z-40 opacity-0 pointer-events-none sidebar-overlay lg:hidden"></div>
     
-    <div id="off-canvas-sidebar" class="fixed top-0 left-0 h-full w-80 bg-white dark:bg-gray-800 shadow-2xl transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-            <h2 class="text-xl font-bold text-blue-900 dark:text-white"><i class="fas fa-list-ul text-orange-500 mr-2"></i> Conteúdo</h2>
-            <button id="close-sidebar-button" class="text-gray-500 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+    <div id="off-canvas-sidebar" class="fixed top-0 left-0 h-full w-4/5 max-w-sm z-50 transform -translate-x-full transition-transform duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-2xl border-r border-gray-200 dark:border-gray-700">
+        <div class="p-0 h-full flex flex-col">
+            <div class="p-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                <h2 class="text-xl font-semibold flex items-center text-blue-900 dark:text-white">
+                    <i class="fas fa-list-ul mr-3 text-orange-500"></i> Conteúdo
+                </h2>
+                <button id="close-sidebar-button" class="text-2xl text-gray-500 dark:text-gray-400 hover:text-red-500">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4 flex-grow overflow-y-auto" id="mobile-module-container"></div>
         </div>
-        <div class="p-4 overflow-y-auto flex-grow" id="mobile-module-container"></div>
     </div>
     
     <div id="main-wrapper" class="flex flex-col min-h-screen">
-        <header id="main-header" class="fixed top-0 w-full z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm transition-all">
-            <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-gradient-to-tr from-red-600 to-orange-500 p-2 rounded-full shadow"><i class="fas fa-shield-alt text-white text-xl"></i></div>
-                    <div>
-                        <h1 class="text-lg md:text-2xl font-bold leading-tight">Projeto Bravo Charlie</h1>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">Formando Profissionais</p>
+        
+        <header id="main-header" class="fixed top-0 left-0 w-full z-40 backdrop-blur-lg bg-white/90 dark:bg-gray-900/90 shadow-md transition-all duration-500">
+            <div class="container mx-auto px-4 md:px-6 max-w-7xl">
+                <div class="flex justify-between items-center py-3">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-gradient-to-tr from-red-600 to-orange-500 p-2 md:p-3 rounded-full shadow-md">
+                            <i class="fas fa-shield-alt text-2xl md:text-3xl text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl md:text-3xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">Projeto Bravo Charlie</h1>
+                            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm">Formando Profissionais de Elite</p>
+                        </div>
+                    </div>
+
+                    <div class="hidden lg:flex items-center space-x-4">
+                        <button id="home-button-desktop" title="Início" class="text-gray-600 dark:text-gray-300 hover:text-orange-500 transition-colors text-xl p-2">
+                            <i class="fas fa-home"></i>
+                        </button>
+                        
+                        <div class="bg-gray-100 dark:bg-gray-800 py-1 px-3 rounded-full text-xs font-semibold border border-gray-200 dark:border-gray-700">
+                            <i class="fas fa-book-open mr-2 text-orange-500"></i>
+                            <span id="course-modules-count">...</span> Módulos
+                        </div>
+                        
+                        <button id="focus-mode-toggle" title="Modo Revisão" class="text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors text-xl p-2">
+                            <i class="fas fa-book-reader"></i>
+                        </button>
+                        
+                        <button id="dark-mode-toggle-desktop" title="Mudar Tema" class="text-xl p-2">
+                            <i class="fas fa-moon"></i>
+                        </button>
+                    </div>
+
+                    <div class="lg:hidden">
+                        <button id="mobile-menu-button" class="text-gray-700 dark:text-white text-2xl p-2">
+                            <i class="fas fa-bars"></i>
+                        </button>
                     </div>
                 </div>
-                <div class="hidden lg:flex items-center space-x-4">
-                    <button id="home-button-desktop" class="p-2 hover:text-orange-500"><i class="fas fa-home text-xl"></i></button>
-                    <div class="bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-700">
-                        <i class="fas fa-book-open text-orange-500 mr-1"></i> <span id="course-modules-count">0</span> Módulos
-                    </div>
-                    <button id="focus-mode-toggle" class="p-2 hover:text-blue-500"><i class="fas fa-book-reader text-xl"></i></button>
-                    <button id="dark-mode-toggle-desktop" class="p-2 hover:text-yellow-400"><i class="fas fa-moon text-xl"></i></button>
-                </div>
-                <button id="mobile-menu-button" class="lg:hidden p-2 text-2xl"><i class="fas fa-bars"></i></button>
             </div>
         </header>
 
-        <div id="sticky-progress-wrapper" class="sticky top-16 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur shadow-sm py-2 transition-colors">
-            <div class="container mx-auto px-4 flex justify-between text-xs font-bold">
-                <span>Progresso: <span id="progress-text" class="text-orange-500">0%</span></span>
-                <span class="text-gray-500"><span id="completed-modules-count">0</span>/<span id="total-modules">0</span></span>
+        <div id="sticky-progress-wrapper" class="sticky-progress-wrapper">
+            <div class="container mx-auto px-4 md:px-6 max-w-7xl">
+                <div class="flex justify-between items-center text-xs md:text-sm font-semibold">
+                    <span class="flex-shrink-0 text-gray-700 dark:text-gray-300">Progresso: <span id="progress-text" class="text-orange-500">0%</span></span>
+                    <span class="flex-shrink-0 text-gray-500 dark:text-gray-400"><span id="completed-modules-count">0</span>/<span id="total-modules">0</span> módulos</span>
+                </div>
             </div>
-            <div class="absolute bottom-0 left-0 h-1 bg-gray-200 dark:bg-gray-700 w-full"><div id="progress-bar-minimal" class="h-full bg-gradient-to-r from-orange-500 to-red-600 w-0 transition-all duration-500"></div></div>
+            <div id="progress-bar-minimal" class="progress-bar-minimal"></div> 
         </div>
 
-        <div class="container mx-auto px-4 py-24 flex flex-col lg:flex-row gap-8 flex-grow">
-            <aside class="hidden lg:block w-1/3 sticky top-32 h-[calc(100vh-10rem)] overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-4">
-                <div id="desktop-module-container"></div>
-            </aside>
-            <div class="w-full lg:w-2/3">
-                <div id="welcome-greeting-container" class="bg-gradient-to-r from-blue-50 to-transparent dark:from-gray-800 p-6 rounded-xl mb-6 border border-blue-100 dark:border-gray-700">
-                    <h2 id="welcome-greeting" class="text-2xl font-bold text-blue-900 dark:text-white">Carregando...</h2>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Continue sua jornada de aprendizado.</p>
+        <div class="container mx-auto px-4 md:px-6 pt-32 pb-20 flex flex-col lg:flex-row gap-8 flex-grow">
+            
+            <aside class="w-full lg:w-1/3 hidden lg:block">
+                <div class="sidebar sticky top-32 max-h-[calc(100vh-9rem)] overflow-y-auto bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-4">
+                    <div id="desktop-module-container"></div>
                 </div>
-                <div id="breadcrumb-container" class="text-sm text-gray-500 mb-4 flex items-center"></div>
+            </aside>
+            
+            <div class="w-full lg:w-2/3">
+                 <div id="welcome-greeting-container" class="mb-6 p-6 bg-gradient-to-r from-blue-50 to-white dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
+                    <h2 id="welcome-greeting" class="text-2xl font-bold text-blue-900 dark:text-white mb-1">Carregando...</h2>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm">Continue de onde parou ou explore um novo módulo.</p>
+                </div>
                 
-                <div id="loading-spinner" class="hidden text-center py-10"><i class="fas fa-circle-notch fa-spin text-4xl text-orange-500"></i></div>
-
-                <main id="main-content-wrapper" class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden min-h-[300px]">
-                    <div id="content-area" class="p-8"></div>
-                    <div id="module-nav" class="hidden flex justify-between border-t border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900">
-                        <button id="prev-module" class="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 font-bold text-sm transition"><i class="fas fa-arrow-left mr-2"></i> Anterior</button>
-                        <button id="next-module" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 font-bold text-sm shadow-lg transition">Próximo <i class="fas fa-arrow-right ml-2"></i></button>
+                <div id="breadcrumb-container" class="mb-4 text-sm text-gray-500 dark:text-gray-400 flex items-center"></div>
+                
+                <div id="loading-spinner" class="hidden text-center p-12">
+                    <div class="loader mx-auto mb-4"></div>
+                    <p class="text-gray-500 font-medium animate-pulse">Carregando conteúdo...</p>
+                </div>
+                
+                <main>
+                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700 min-h-[400px]">
+                        <div id="content-area" class="p-6 md:p-10"></div>
+                        <div id="module-nav" class="module-nav hidden flex justify-between items-center p-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+                            <button id="prev-module" class="action-button text-sm px-4 py-2" disabled><i class="fas fa-arrow-left mr-2"></i> Anterior</button>
+                            <button id="next-module" class="action-button text-sm px-4 py-2">Próximo <i class="fas fa-arrow-right ml-2"></i></button>
+                        </div>
                     </div>
                 </main>
             </div>
         </div>
 
-        <footer class="bg-gray-900 text-gray-400 py-8 text-center text-sm mt-auto">
-            <p class="mb-2 font-serif italic">Desenvolvido por Instrutor Medeiros</p>
-            <p>© 2023-2025. Todos os direitos reservados.</p>
-            <div class="mt-4 space-x-4">
-                <button id="logout-button" class="hover:text-white text-xs uppercase tracking-wider"><i class="fas fa-sign-out-alt"></i> Sair</button>
-                <button id="reset-progress" class="hover:text-red-400 text-xs uppercase tracking-wider"><i class="fas fa-trash"></i> Resetar</button>
-            </div>
-        </footer>
-    </div>
-
-    <div id="name-modal-overlay" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm transition-opacity">
-        <div id="name-prompt-modal" class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full transform scale-95 transition-transform">
-            <div id="auth-content-screen">
-                <div class="text-center mb-6">
-                    <div class="inline-block p-4 bg-blue-100 dark:bg-gray-700 rounded-full mb-3 text-blue-600 dark:text-blue-400"><i class="fas fa-user-shield text-3xl"></i></div>
-                    <h2 id="auth-title" class="text-2xl font-bold">Área do Aluno</h2>
-                    <p id="auth-message" class="text-sm text-gray-500">Acesse para continuar.</p>
-                </div>
-                <div class="space-y-3">
-                    <div id="name-field-container" class="hidden"><label class="text-xs font-bold uppercase text-gray-500">Nome</label><input id="name-input" type="text" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600"></div>
-                    <div id="cpf-field-container" class="hidden"><label class="text-xs font-bold uppercase text-gray-500">CPF</label><input id="cpf-input" type="text" maxlength="14" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600"></div>
-                    <div><label class="text-xs font-bold uppercase text-gray-500">Email</label><input id="email-input" type="email" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600"></div>
-                    <div><label class="text-xs font-bold uppercase text-gray-500">Senha</label><input id="password-input" type="password" class="w-full p-3 rounded border dark:bg-gray-700 dark:border-gray-600"></div>
-                </div>
-                <p id="auth-feedback" class="text-center text-xs font-bold text-red-500 min-h-[1.5rem] mt-2"></p>
-                <div id="login-button-group" class="mt-4 space-y-2">
-                    <button id="login-button" class="w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition">Entrar</button>
-                    <button id="show-signup-button" class="w-full py-2 text-sm text-blue-500 hover:underline">Criar conta (30 dias grátis)</button>
-                    <button id="toggle-payment-view" class="w-full py-2 text-xs text-green-600 font-bold hover:underline"><i class="fas fa-crown"></i> Assinar Premium</button>
-                </div>
-                <div id="signup-button-group" class="mt-4 space-y-2 hidden">
-                    <button id="signup-button" class="w-full py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition">Cadastrar</button>
-                    <button id="show-login-button" class="w-full py-2 text-sm text-gray-500 hover:underline">Voltar para Login</button>
-                </div>
-            </div>
-
-            <div id="payment-content-screen" class="hidden">
-                <div class="text-center mb-6">
-                    <div class="inline-block p-3 bg-green-100 rounded-full mb-2 text-green-600"><i class="fas fa-star text-2xl"></i></div>
-                    <h3 class="text-xl font-bold">Plano Anual</h3>
-                    <p class="text-sm text-gray-500">Acesso total por 1 ano.</p>
-                </div>
-                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border mb-4 text-center">
-                    <p class="text-2xl font-bold text-green-600">R$ 49,90</p>
-                    <p class="text-xs text-gray-400 mt-1">Chave PIX:</p>
-                    <div class="flex items-center justify-center gap-2 mt-2">
-                        <code class="bg-white dark:bg-gray-800 px-2 py-1 rounded border">61998300711</code>
+        <footer class="bg-gray-900 text-white py-8 mt-auto">
+            <div class="container mx-auto px-4 text-center">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8 text-left">
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-white">Formação Bombeiro Civil</h3>
+                        <p class="text-gray-400 text-sm">Capacitação profissional de excelência.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-semibold mb-2 text-white">Contato</h3>
+                        <div class="flex flex-col space-y-2 text-sm text-gray-400">
+                            <a href="#" class="hover:text-orange-500"><i class="fab fa-instagram w-5"></i> @coordenadormedeiros</a>
+                            <a href="#" class="hover:text-orange-500"><i class="fas fa-shirt w-5"></i> Artigos Militares</a>
+                        </div>
                     </div>
                 </div>
-                <button onclick="window.open('https://pay.infinitepay.io/pixmedeiros/VC1D-2Eb9WDMcOj-49,90', '_blank')" class="w-full py-3 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold shadow-lg hover:-translate-y-1 transition">Pagar com Cartão</button>
-                <button id="back-to-auth-from-payment" class="w-full mt-3 text-sm text-gray-500 hover:underline">Voltar</button>
+                <div class="border-t border-gray-700 pt-6">
+                    <p class="developer-credit mb-2">Desenvolvido por Instrutor Medeiros</p>
+                    <p class="text-sm text-gray-500">© 2013-2025 Curso de Formação Profissional.</p>
+                    <div class="mt-4 flex justify-center space-x-4 text-xs">
+                        <button id="logout-button" class="text-yellow-500 hover:text-white transition flex items-center"><i class="fas fa-sign-out-alt mr-1"></i> Sair</button>
+                        <button id="reset-progress" class="text-red-500 hover:text-white transition flex items-center"><i class="fas fa-trash-alt mr-1"></i> Resetar</button>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </div> <div id="name-prompt-modal" class="modal">
+        <div id="auth-content-screen">
+            <div class="floating inline-block p-4 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+                <i class="fas fa-shield-alt text-4xl text-blue-600 dark:text-blue-300"></i>
+            </div>
+            <h2 id="auth-title" class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Área do Aluno</h2>
+            <p id="auth-message" class="text-sm mb-4 text-gray-600 dark:text-gray-300">Identifique-se para acessar o conteúdo.</p>
+            
+            <div class="space-y-3 text-left">
+                <div id="name-field-container" class="hidden">
+                    <label class="input-label">Nome Completo</label>
+                    <input type="text" id="name-input" class="modal-input" placeholder="Seu nome">
+                </div>
+                <div id="cpf-field-container" class="hidden">
+                    <label class="input-label">CPF (Apenas números)</label>
+                    <input type="text" id="cpf-input" maxlength="14" class="modal-input" placeholder="000.000.000-00">
+                </div>
+                <div>
+                    <label class="input-label">Email</label>
+                    <input type="email" id="email-input" class="modal-input" placeholder="seu@email.com">
+                </div>
+                <div>
+                    <label class="input-label">Senha</label>
+                    <input type="password" id="password-input" class="modal-input" placeholder="••••••••">
+                </div>
+            </div>
+            
+            <p id="auth-feedback" class="text-xs mt-3 font-bold text-red-500 h-4"></p>
+            
+            <div id="login-button-group" class="w-full mt-4 space-y-2">
+                <button id="login-button" class="action-button w-full">Entrar</button>
+                <button id="show-signup-button" class="text-sm text-blue-600 dark:text-blue-400 hover:underline w-full py-1">Criar conta (Trial 30 dias)</button>
+                <button id="toggle-payment-view" class="text-xs text-green-600 dark:text-green-400 hover:underline w-full mt-2 font-bold flex justify-center items-center"><i class="fas fa-crown mr-1"></i> Assinar / Renovar</button>
+            </div>
+            
+            <div id="signup-button-group" class="w-full mt-4 space-y-2 hidden">
+                <button id="signup-button" class="action-button w-full" style="background: var(--success);">Cadastrar e Iniciar</button>
+                <button id="show-login-button" class="text-sm text-blue-600 dark:text-blue-400 hover:underline w-full py-1">Voltar para Login</button>
             </div>
         </div>
-    </div>
 
-    <div id="expired-modal" class="fixed inset-0 bg-black bg-opacity-90 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl text-center max-w-sm w-full">
-            <i class="fas fa-clock text-5xl text-red-500 mb-4"></i>
-            <h2 class="text-2xl font-bold mb-2">Acesso Expirado</h2>
-            <p class="text-sm text-gray-500 mb-6">Seu período de teste acabou. Renove para continuar.</p>
-            <button onclick="window.open('https://pay.infinitepay.io/pixmedeiros/VC1D-2Eb9WDMcOj-49,90', '_blank')" class="w-full py-3 rounded-lg bg-green-600 text-white font-bold mb-3">Renovar (R$ 49,90)</button>
-            <button id="logout-expired-button" class="text-red-500 text-sm underline">Sair da Conta</button>
+        <div id="payment-content-screen" class="hidden text-left">
+            <div class="text-center mb-4">
+                <div class="inline-block p-3 bg-green-100 dark:bg-green-900 rounded-full mb-2">
+                    <i class="fas fa-star text-3xl text-green-600 dark:text-green-400"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">Acesso Premium</h3>
+                <p class="text-gray-600 dark:text-gray-300 text-sm">Acesso completo à plataforma.</p>
+            </div>
+            
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="font-bold text-gray-700 dark:text-gray-200">Plano Anual:</span>
+                    <span class="text-xl font-bold text-green-600 dark:text-green-400">R$ 49,90</span>
+                </div>
+                <hr class="border-gray-300 dark:border-gray-600 my-2">
+                <p class="text-xs text-gray-500 dark:text-gray-400 mb-1">Chave PIX (Copia e Cola):</p>
+                <div class="flex space-x-2">
+                    <input type="text" value="61998300711" id="pix-key-input" readonly class="w-full p-2 text-xs bg-white dark:bg-gray-800 border rounded border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300">
+                    <button onclick="navigator.clipboard.writeText('61998300711'); alert('PIX copiado!')" class="px-3 py-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            
+            <button class="action-button w-full mb-3" onclick="window.open('https://pay.infinitepay.io/pixmedeiros/VC1D-2Eb9WDMcOj-49,90', '_blank')">
+                <i class="fas fa-credit-card mr-2"></i> Pagar com Cartão / Link
+            </button>
+            
+            <button id="back-to-auth-from-payment" class="w-full text-sm text-blue-600 dark:text-blue-400 hover:underline text-center">
+                <i class="fas fa-arrow-left mr-1"></i> Voltar
+            </button>
         </div>
     </div>
+    <div id="name-modal-overlay" class="modal-overlay"></div>
 
-    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-70 z-40 hidden"></div>
-    <div id="congratulations-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl z-50 hidden text-center max-w-sm w-full">
-        <i class="fas fa-trophy text-5xl text-yellow-400 mb-4"></i>
-        <h2 class="text-2xl font-bold">Parabéns!</h2>
-        <p class="text-gray-500 mt-2">Você concluiu o curso.</p>
-        <button id="close-congrats" class="mt-6 px-6 py-2 bg-gray-200 dark:bg-gray-700 rounded-full font-bold text-sm hover:bg-gray-300">Fechar</button>
+    <div id="expired-modal" class="modal">
+        <div class="floating inline-block p-4 bg-red-100 dark:bg-red-900 rounded-full mb-4">
+            <i class="fas fa-lock text-4xl text-red-600 dark:text-red-300"></i>
+        </div>
+        <h2 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Acesso Expirado</h2>
+        <p class="text-sm mb-4 text-gray-600 dark:text-gray-300">
+            Seu período de teste encerrou. Renove para continuar estudando.
+        </p>
+        <button class="action-button w-full mb-3 text-sm" onclick="window.open('https://pay.infinitepay.io/pixmedeiros/VC1D-2Eb9WDMcOj-49,90', '_blank')">
+            <i class="fas fa-external-link-alt mr-2"></i> Renovar Agora (R$ 49,90)
+        </button>
+        <button id="logout-expired-button" class="text-xs text-red-500 hover:underline mt-2">Sair da conta</button>
     </div>
 
-    <nav class="lg:hidden fixed bottom-0 left-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 z-40 flex justify-around h-16 items-center shadow-lg">
-        <button id="bottom-nav-home" class="flex flex-col items-center w-full text-gray-500 hover:text-orange-500"><i class="fas fa-home text-lg"></i><span class="text-[10px]">Início</span></button>
-        <button id="bottom-nav-modules" class="flex flex-col items-center w-full text-gray-500 hover:text-orange-500"><i class="fas fa-list-ul text-lg"></i><span class="text-[10px]">Módulos</span></button>
-        <button id="bottom-nav-focus" class="flex flex-col items-center w-full text-gray-500 hover:text-orange-500"><i class="fas fa-book-reader text-lg"></i><span class="text-[10px]">Foco</span></button>
-        <button id="bottom-nav-theme" class="flex flex-col items-center w-full text-gray-500 hover:text-orange-500"><i class="fas fa-moon text-lg"></i><span class="text-[10px]">Tema</span></button>
-    </nav>
+    <div id="reset-modal" class="modal">
+         <h2 class="text-2xl font-bold text-gray-800 dark:text-white mb-4">Resetar Progresso?</h2>
+         <div class="flex justify-center space-x-4">
+            <button id="cancel-reset-button" class="px-4 py-2 bg-gray-300 rounded text-black">Cancelar</button>
+            <button id="confirm-reset-button" class="px-4 py-2 bg-red-600 text-white rounded">Confirmar</button>
+         </div>
+    </div>
+    <div id="reset-modal-overlay" class="modal-overlay"></div>
 
+    <div id="congratulations-modal" class="modal">
+        <div class="floating inline-block p-4 bg-yellow-100 rounded-full mb-4"><i class="fas fa-trophy text-4xl text-yellow-600"></i></div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Parabéns!</h2>
+        <p class="text-gray-600">Curso concluído.</p>
+        <button id="close-congrats" class="action-button mt-4">Fechar</button>
+    </div>
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <div id="achievement-modal" class="modal">
+        <div id="ach-modal-icon-container" class="mb-4"></div>
+        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">Conquista!</h2>
+        <p id="ach-modal-title" class="text-gray-600 mt-2">...</p>
+        <button id="close-ach-modal" class="action-button mt-4">Continuar</button>
+    </div>
+    <div id="achievement-modal-overlay" class="modal-overlay"></div>
+
+    <button id="back-to-top" class="action-button fixed bottom-20 right-5 z-50 w-12 h-12 rounded-full hidden items-center justify-center shadow-lg">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <nav class="lg:hidden fixed bottom-0 left-0 w-full z-40 bg-white dark:bg-gray-800 shadow-lg border-t border-gray-200 dark:border-gray-700">
+        <div class="flex justify-around items-center h-16">
+            <button id="bottom-nav-home" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-home text-lg"></i><span class="text-[10px]">Início</span></button>
+            <button id="bottom-nav-modules" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-list-ul text-lg"></i><span class="text-[10px]">Módulos</span></button>
+            <button id="bottom-nav-focus" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-book-reader text-lg"></i><span class="text-[10px]">Foco</span></button>
+            <button id="bottom-nav-theme" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-moon text-lg"></i><span class="text-[10px]">Tema</span></button>
+        </div>
+    </nav>
+    
+    <div id="focus-menu-desktop" class="hidden fixed top-4 right-4 z-50 space-x-2">
+         <button id="focus-menu-modules" title="Módulos" class="w-12 h-12 rounded-full bg-red-600 text-white shadow-lg"><i class="fas fa-list-ul"></i></button>
+         <button id="focus-menu-exit" title="Sair" class="w-12 h-12 rounded-full bg-gray-800 text-white shadow-lg"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <nav id="focus-nav-bar" class="hidden fixed bottom-0 left-0 w-full z-50 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div class="flex justify-around items-center h-16">
+            <button id="focus-nav-modules" class="flex flex-col items-center text-gray-600 dark:text-gray-400 w-full"><i class="fas fa-list-ul text-xl"></i><span class="text-xs">Módulos</span></button>
+            <button id="focus-nav-exit" class="flex flex-col items-center text-red-500 w-full"><i class="fas fa-times-circle text-xl"></i><span class="text-xs">Sair</span></button>
+        </div>
+    </nav>
+    
     <script src="quizzes.js" defer></script>
     <script src="data.js" defer></script>
     <script src="course.js" defer></script>
     <script src="firebase-init.js" defer></script>
-    <script src="app_final.js" defer></script>
+    <script src="app_final.js" defer></script> 
 </body>
 </html>
