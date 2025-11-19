@@ -18,7 +18,7 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
 
-/* === BARRA DE PROGRESSO === */
+/* === BARRA DE PROGRESSO MINIMALISTA === */
 @keyframes progress-gradient-flow {
   0% { background-position: 200% center; }
   100% { background-position: 0% center; }
@@ -74,7 +74,7 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 .sidebar-overlay.show { opacity: 1; pointer-events: auto; }
 .sidebar { background: var(--panel-bg); padding: 1.5rem; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.07); border: 1px solid var(--border-color); }
 
-/* ==== BOTÕES ==== */
+/* ==== BOTÕES PREMIUM ==== */
 .action-button {
   position: relative;
   overflow: hidden;
@@ -107,7 +107,12 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 }
 
 /* ==== EFEITO RIPPLE ==== */
-.action-button .ripple, .quiz-option .ripple {
+.action-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.action-button .ripple {
   position: absolute;
   border-radius: 50%;
   transform: scale(0);
@@ -115,13 +120,41 @@ h1, h2, h3 { font-family: 'Lora', serif; }
   pointer-events: none;
 }
 
-:root .action-button .ripple { background: rgba(255, 255, 255, 0.7); }
-.dark .action-button .ripple { background: rgba(247, 127, 0, 0.45); }
-:root .quiz-option .ripple { background: rgba(255, 255, 255, 0.6); }
-.dark .quiz-option .ripple { background: rgba(247, 127, 0, 0.35); }
+:root .action-button .ripple {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.dark .action-button .ripple {
+  background: rgba(247, 127, 0, 0.45); 
+}
 
 @keyframes ripple-effect {
-  to { transform: scale(4); opacity: 0; }
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* === EFEITO RIPPLE NAS PERGUNTAS === */
+.quiz-option {
+  position: relative;
+  overflow: hidden;
+}
+
+.quiz-option .ripple {
+  position: absolute;
+  border-radius: 50%;
+  transform: scale(0);
+  animation: ripple-effect 0.6s linear;
+  pointer-events: none;
+}
+
+:root .quiz-option .ripple {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.dark .quiz-option .ripple {
+  background: rgba(247, 127, 0, 0.35);
 }
 
 .quiz-option { 
@@ -135,8 +168,6 @@ h1, h2, h3 { font-family: 'Lora', serif; }
     color: var(--dark-text); 
     display: flex;
     align-items: flex-start;
-    position: relative;
-    overflow: hidden;
 }
 .dark .quiz-option { 
     background-color: #374151; 
@@ -175,7 +206,7 @@ h1, h2, h3 { font-family: 'Lora', serif; }
     color: white !important;
 }
 
-/* Feedback Area */
+/* Feedback Aprimorado (Area) */
 .feedback-area {
     margin-top: -0.5rem; 
     margin-bottom: 1rem;
