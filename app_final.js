@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Adiciona listener para o botão de Sair (Logout)
         document.getElementById('logout-button')?.addEventListener('click', FirebaseCourse.signOutUser);
         document.getElementById('logout-expired-button')?.addEventListener('click', FirebaseCourse.signOutUser);
+        document.getElementById('logout-button-header')?.addEventListener('click', FirebaseCourse.signOutUser);
 
         // O checkAuth controla o início do app e valida a sessão
         FirebaseCourse.checkAuth((user, userData) => {
@@ -123,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 2. Define a saudação e marca d'água
         const greetingEl = document.getElementById('welcome-greeting');
-        if(greetingEl) greetingEl.textContent = `Olá, ${userData.name}!`;
+        if(greetingEl) greetingEl.textContent = `Olá, ${userData.name.split(' ')[0]}!`;
         
         if (printWatermark) {
             // Segurança: CPF na marca d'água
@@ -205,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nameField.classList.add('hidden');
             cpfField.classList.add('hidden'); // Esconde CPF
             authTitle.textContent = "Área do Aluno";
-            authMsg.textContent = "Identifique-se para acessar o conteúdo.";
+            authMsg.textContent = "Identifique-se para continuar seus estudos.";
             feedback.textContent = "";
         });
         
@@ -215,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = passwordInput.value;
             if (!email || !password) {
                 feedback.textContent = "Por favor, preencha e-mail e senha.";
+                feedback.className = "text-center text-sm mt-4 font-semibold text-red-500";
                 return;
             }
             feedback.textContent = "Entrando...";
@@ -245,11 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const cpf = cpfInput.value;
             
             if (!name || !email || !password || !cpf) {
-                feedback.textContent = "Por favor, preencha todos os campos (Nome, CPF, Email, Senha).";
+                feedback.textContent = "Todos os campos são obrigatórios.";
+                feedback.className = "text-center text-sm mt-4 font-semibold text-red-500";
                 return;
             }
             if (password.length < 6) {
                 feedback.textContent = "A senha deve ter no mínimo 6 caracteres.";
+                feedback.className = "text-center text-sm mt-4 font-semibold text-red-500";
                 return;
             }
             
@@ -333,6 +337,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3 class="flex items-center text-3xl mb-6 pb-4 border-b"><i class="${d.iconClass} mr-4 ${categoryColor} fa-fw"></i>${d.title}</h3>
                 <div>${d.content}</div>
             `;
+
+            // --- NOVO: BOTÃO DO DRIVE ---
+            // Se o módulo tiver um link do Drive definido no data.js, mostra o botão
+            if (d.driveLink) {
+                html += `
+                <div class="drive-link-container">
+                    <a href="${d.driveLink}" target="_blank" class="drive-button">
+                        <i class="fab fa-google-drive"></i>
+                        Material de Apoio (Fotos e Vídeos)
+                    </a>
+                </div>
+                `;
+            }
+            // ---------------------------
 
             // Adiciona Quiz se houver
             if (allQuestions && allQuestions.length > 0) {
