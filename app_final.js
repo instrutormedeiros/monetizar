@@ -1,7 +1,33 @@
-/* === ARQUIVO app_final.js (VERSÃO FINAL - COMPLETA E ROBUSTA) === */
+/* === ARQUIVO app_final.js (VERSÃO FINAL - ATUALIZADA) === */
 
 // ESPERA O HTML ESTAR 100% CARREGADO ANTES DE EXECUTAR QUALQUER COISA
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- PWA INSTALLATION LOGIC (PONTO 7) ---
+    let deferredPrompt;
+    const installBtn = document.getElementById('install-app-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if(installBtn) installBtn.classList.remove('hidden'); // Mostra o botão
+    });
+
+    if(installBtn) {
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.classList.add('hidden');
+                }
+                deferredPrompt = null;
+            } else {
+                // Fallback para iOS ou se o prompt não disparou
+                alert("Para instalar no iOS:\n1. Toque no botão de Compartilhar (quadrado com seta).\n2. Role para baixo e toque em 'Adicionar à Tela de Início'.\n\nPara Android (se o botão não funcionar):\nToque nos 3 pontos do navegador e selecione 'Instalar aplicativo'.");
+            }
+        });
+    }
 
     // --- VERIFICAÇÃO DE SEGURANÇA (Primeira coisa a rodar) ---
     // (Verifica se data.js e course.js carregaram corretamente)
@@ -158,34 +184,58 @@ document.addEventListener('DOMContentLoaded', () => {
         const authTitle = document.getElementById('auth-title');
         const authMsg = document.getElementById('auth-message');
 
-        // Botões de Ação
+        // Botões de Ação de Login
         const btnShowLogin = document.getElementById('show-login-button');
         const btnShowSignup = document.getElementById('show-signup-button');
         const btnLogin = document.getElementById('login-button');
         const btnSignup = document.getElementById('signup-button');
         
-        // Modal de Pagamento
+        // --- LÓGICA DO BOTÃO DE PAGAMENTO (ATUALIZADO - PONTOS 2 e 3) ---
+        const btnOpenPayHeader = document.getElementById('header-subscribe-btn');
+        const btnOpenPayMobile = document.getElementById('mobile-subscribe-btn');
         const btnOpenPayLogin = document.getElementById('open-payment-login-btn');
-        const btnClosePayModal = document.getElementById('close-payment-modal-btn');
+        
         const expiredModal = document.getElementById('expired-modal');
+        const closePayModal = document.getElementById('close-payment-modal-btn');
         const loginModalOverlay = document.getElementById('name-modal-overlay');
         const loginModal = document.getElementById('name-prompt-modal');
 
-        // --- LÓGICA DO BOTÃO DE PAGAMENTO NA TELA DE LOGIN ---
-        btnOpenPayLogin?.addEventListener('click', () => {
-             loginModal.classList.remove('show'); // Esconde login
-             expiredModal.classList.add('show'); // Mostra pagamento
-             loginModalOverlay.classList.add('show'); // Mantém fundo escuro
-             
-             // Ajusta o modal de expirado para permitir voltar
-             btnClosePayModal.classList.remove('hidden');
-             const msgEl = document.getElementById('expired-text-msg');
-             if(msgEl) msgEl.textContent = "Confira nossos planos e realize o pagamento para ativar ou renovar seu acesso.";
-        });
+        // Função unificada para abrir modal de pagamento
+        function openPaymentModal() {
+            expiredModal.classList.add('show');
+            // Se o overlay já estiver lá (tela de login), ótimo. Se não (logado), chamamos ele.
+            if (loginModalOverlay) loginModalOverlay.classList.add('show');
+            
+            // Se a pessoa estiver na tela de login, esconde o login para mostrar o pagamento
+            if (loginModal && loginModal.classList.contains('show')) {
+                loginModal.classList.remove('show');
+                loginModal.dataset.wasOpen = 'true'; // Lembra que veio do login
+            }
+        }
 
-        btnClosePayModal?.addEventListener('click', () => {
-             expiredModal.classList.remove('show'); // Esconde pagamento
-             loginModal.classList.add('show'); // Volta pro login
+        // Listeners de Pagamento
+        btnOpenPayHeader?.addEventListener('click', openPaymentModal);
+        btnOpenPayMobile?.addEventListener('click', openPaymentModal);
+        btnOpenPayLogin?.addEventListener('click', openPaymentModal);
+
+        closePayModal?.addEventListener('click', () => {
+            expiredModal.classList.remove('show');
+            
+            // Lógica de Retorno:
+            if (loginModal && loginModal.dataset.wasOpen === 'true') {
+                // Se veio do login, volta pro login
+                loginModal.classList.add('show');
+                loginModal.dataset.wasOpen = 'false';
+            } else {
+                // Se não veio do login...
+                if (document.body.getAttribute('data-app-ready') === 'true') {
+                     // Se o usuário já está logado, remove o overlay preto
+                     loginModalOverlay?.classList.remove('show');
+                } else {
+                    // Se não está logado e fechou o pagamento, joga pro login por segurança
+                    loginModal?.classList.add('show');
+                }
+            }
         });
 
         // Alternar para modo CADASTRO
@@ -206,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nameField.classList.add('hidden');
             cpfField.classList.add('hidden'); // Esconde CPF
             authTitle.textContent = "Área do Aluno";
-            authMsg.textContent = "Identifique-se para continuar seus estudos.";
+            authMsg.textContent = "Acesso Restrito • Elite Profissional";
             feedback.textContent = "";
         });
         
@@ -338,14 +388,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>${d.content}</div>
             `;
 
-            // --- NOVO: BOTÃO DO DRIVE ---
+            // --- NOVO: BOTÃO DO DRIVE (PONTO 6) ---
             // Se o módulo tiver um link do Drive definido no data.js, mostra o botão
             if (d.driveLink) {
                 html += `
-                <div class="drive-link-container">
+                <div class="mt-10 mb-8">
                     <a href="${d.driveLink}" target="_blank" class="drive-button">
                         <i class="fab fa-google-drive"></i>
-                        Material de Apoio (Fotos e Vídeos)
+                        VER FOTOS E VÍDEOS DESTA MATÉRIA
                     </a>
                 </div>
                 `;
