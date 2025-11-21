@@ -1,5 +1,6 @@
 /* firebase-init.js
    Funções de autenticação, CPF único e sessão única para o Projeto Bravo Charlie.
+   VERSÃO CORRIGIDA: Correção do bug de cadastro (Race Condition).
 */
 
 (function(){
@@ -29,7 +30,6 @@
   function validarCPF(cpf) {
       cpf = cpf.replace(/[^\d]+/g,'');
       if(cpf == '') return false;
-      // Elimina CPFs invalidos conhecidos
       if (cpf.length != 11 || 
           cpf == "00000000000" || 
           cpf == "11111111111" || 
@@ -42,13 +42,11 @@
           cpf == "88888888888" || 
           cpf == "99999999999")
               return false;
-      // Valida 1o digito
       let add = 0;
       for (let i=0; i < 9; i ++) add += parseInt(cpf.charAt(i)) * (10 - i);
       let rev = 11 - (add % 11);
       if (rev == 10 || rev == 11) rev = 0;
       if (rev != parseInt(cpf.charAt(9))) return false;
-      // Valida 2o digito
       add = 0;
       for (let i = 0; i < 10; i ++) add += parseInt(cpf.charAt(i)) * (11 - i);
       rev = 11 - (add % 11);
@@ -69,8 +67,7 @@
         throw new Error("CPF inválido. Verifique os números.");
     }
 
-    // 2. Verifica se CPF já existe (Regra de Unicidade no Firestore)
-    // A regra de segurança permite leitura em /cpfs/{cpf} para qualquer um
+    // 2. Verifica se CPF já existe
     const cpfDocRef = __fbDB.collection('cpfs').doc(cpf);
     const cpfSnapshot = await cpfDocRef.get();
     
@@ -84,20 +81,21 @@
     
     // 4. Define a data de expiração (30 dias a partir de agora)
     const trialEndDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const sessionId = Date.now().toString(); // ID único para esta sessão
+    const sessionId = Date.now().toString();
 
     try {
         // 5. Reserva o CPF
         await cpfDocRef.set({ uid: uid });
 
         // 6. Cria o documento do Usuário
+        // IMPORTANTE: Isso pode levar alguns segundos para propagar
         await __fbDB.collection('users').doc(uid).set({
           name: name,
           email: email,
           cpf: cpf,
           status: 'trial', // 'trial', 'paid', 'expired'
           acesso_ate: trialEndDate.toISOString(),
-          current_session_id: sessionId // Controle de sessão única
+          current_session_id: sessionId
         });
         
         console.log(`Usuário ${uid} criado com trial até ${trialEndDate.toLocaleDateString()}.`);
@@ -118,9 +116,15 @@
     
     // Atualiza o Session ID no Firestore para derrubar logins anteriores
     const newSessionId = Date.now().toString();
-    await __fbDB.collection('users').doc(userCred.user.uid).update({
-        current_session_id: newSessionId
-    });
+    
+    // Tenta atualizar a sessão. Se falhar, não impede o login, mas avisa.
+    try {
+        await __fbDB.collection('users').doc(userCred.user.uid).update({
+            current_session_id: newSessionId
+        });
+    } catch (e) {
+        console.warn("Aviso: Não foi possível atualizar sessão única (pode ser atraso na criação).", e);
+    }
 
     return userCred.user;
   };
@@ -158,17 +162,21 @@
 
     __fbAuth.onAuthStateChanged(async (user) => {
       if (user) {
-        // --- USUÁRIO ESTÁ LOGADO ---
+        // --- USUÁRIO ESTÁ LOGADO NO AUTH ---
         console.log("Auth detectado:", user.uid);
         
-        // Listener em Tempo Real para detectar Sessão Dupla ou Expiração
+        // Listener em Tempo Real
         unsubscribeUserDoc = __fbDB.collection('users').doc(user.uid)
             .onSnapshot((doc) => {
+                // === CORREÇÃO CRÍTICA ===
+                // Se o documento não existe, NÃO deslogar imediatamente.
+                // Pode ser um cadastro que acabou de ser feito e o Firestore ainda está salvando.
                 if (!doc.exists) {
-                    console.error("Usuário sem documento.");
-                    FirebaseCourse.signOutUser();
-                    return;
+                    console.warn("Documento do usuário ainda não disponível. Aguardando sincronização...");
+                    // Retornamos e esperamos o próximo 'snapshot' (quando o documento for criado)
+                    return; 
                 }
+                // ========================
                 
                 const userData = doc.data();
                 
@@ -178,27 +186,24 @@
 
                 if (hoje > acessoAte) {
                     console.warn("Acesso expirado!");
-                    if (unsubscribeUserDoc) unsubscribeUserDoc(); // Para de ouvir
-                    // Mostra modal de expirado e bloqueia interação
+                    // Não desinscreve aqui para permitir reativação em tempo real se pagar
                     if(expiredModal) {
                         expiredModal.classList.add('show');
-                        // Garante que o overlay de login também apareça para bloquear fundo
                         if(loginOverlay) loginOverlay.classList.add('show');
                     }
                     return;
                 }
 
-                // 2. Verifica Sessão Única (Se o ID no banco for diferente, alguém logou em outro lugar)
+                // 2. Verifica Sessão Única
                 const localSession = localStorage.getItem('my_session_id');
                 
                 if (!localSession) {
                     // Primeira vez carregando após login
                     localStorage.setItem('my_session_id', userData.current_session_id);
-                    // Libera o app
                     onLoginSuccess(user, userData);
                 } else {
-                    // Já temos uma sessão local. É igual a do banco?
-                    if (localSession !== userData.current_session_id) {
+                    // Sessão já existe. É igual a do banco?
+                    if (userData.current_session_id && localSession !== userData.current_session_id) {
                         console.warn("Sessão duplicada detectada. Deslogando...");
                         alert("Sua conta foi acessada em outro dispositivo. Você será desconectado.");
                         localStorage.removeItem('my_session_id');
@@ -206,12 +211,16 @@
                         FirebaseCourse.signOutUser();
                         return;
                     }
-                    // Se for igual, tudo certo, garante que o app tá rodando
+                    // Tudo certo
                     onLoginSuccess(user, userData);
                 }
                 
             }, (error) => {
                 console.error("Erro no listener de usuário:", error);
+                // Se for erro de permissão, aí sim desloga
+                if (error.code === 'permission-denied') {
+                    FirebaseCourse.signOutUser();
+                }
             });
 
       } else {
