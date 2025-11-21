@@ -4,7 +4,8 @@
 const moduleContent = {
     'module1': { 
         id: "module1", 
-        title: "1. RH: Fundamentos da Comunicação", 
+        title: "1. RH: Fundamentos da Comunicação",
+        driveLink: "SEU_LINK_DO_DRIVE_AQUI",
         iconClass: "fas fa-comments", 
         content: `<h4>1.1 O que é Comunicação?</h4><p>A comunicação é o coração das nossas interações. É o processo de compartilhar ideias, emoções e informações, usando símbolos como palavras, gestos ou imagens. Ela é fundamental para criar conexões e fortalecer tanto as relações humanas quanto as culturais.</p><p>Essencial em todos os aspectos da vida, a comunicação se manifesta de diversas formas: oral, escrita, corporal e digital.</p><h4>1.2 Por que a Comunicação é Importante?</h4><p>A comunicação é a base para:</p><ul><li>Construir amizades e laços familiares sólidos.</li><li>Compartilhar conhecimento e aprender com outras culturas.</li><li>Resolver problemas de forma eficaz e colaborar em equipe.</li><li>Expressar quem somos e compreender o próximo, promovendo a empatia.</li></ul><h4>1.3 Formas de Comunicação</h4><p>Existem duas grandes formas de comunicação: Verbal e Não-verbal.</p><div class="key-concept"><h5>Comunicação Verbal</h5><p>A comunicação verbal foca na formação de frases com coerência para transmitir uma mensagem clara. Ela utiliza, principalmente, as formas orais, escritas e digitais. Exemplos incluem conversas, e-mails, mensagens de aplicativos e comandos de voz.</p></div><div class="key-concept"><h5>Comunicação Não-Verbal</h5><p>A comunicação não-verbal dispensa o uso de frases, concentrando-se em formas corporais e visuais. Exemplos incluem Libras, gestos, expressões faciais, placas de trânsito e emojis.</p></div>` 
     },
@@ -1638,6 +1639,7 @@ if (typeof window !== 'undefined') {
   window.moduleContent = moduleContent;
   window.moduleCategories = moduleCategories;
 }
+
 
 
 
