@@ -1,6 +1,6 @@
 /* firebase-init.js
    Funções de autenticação, CPF único e sessão única para o Projeto Bravo Charlie.
-   VERSÃO CORRIGIDA: Correção do bug de cadastro (Race Condition).
+   VERSÃO CORRIGIDA FINAL: Uso de Batch Write para garantir gravação atômica (CPF + User).
 */
 
 (function(){
@@ -55,7 +55,7 @@
       return true;
   }
 
-  // --- 2. CADASTRO (com CPF e Trial de 30 dias) ---
+  // --- 2. CADASTRO BLINDADO (BATCH WRITE) ---
   window.FirebaseCourse.signUpWithEmail = async function(name, email, password, cpfRaw){
     if (!window.__fbAuth || !window.__fbDB) {
       throw new Error('Firebase não inicializado.');
@@ -67,7 +67,7 @@
         throw new Error("CPF inválido. Verifique os números.");
     }
 
-    // 2. Verifica se CPF já existe
+    // 2. Verifica se CPF já existe no banco (Leitura rápida)
     const cpfDocRef = __fbDB.collection('cpfs').doc(cpf);
     const cpfSnapshot = await cpfDocRef.get();
     
@@ -75,7 +75,7 @@
         throw new Error("Este CPF já está cadastrado em outra conta.");
     }
 
-    // 3. Cria o usuário no Authentication
+    // 3. Cria o usuário no Authentication (Isso gera o UID)
     const userCred = await __fbAuth.createUserWithEmailAndPassword(email, password);
     const uid = userCred.user.uid;
     
@@ -84,12 +84,16 @@
     const sessionId = Date.now().toString();
 
     try {
-        // 5. Reserva o CPF
-        await cpfDocRef.set({ uid: uid });
+        // --- AQUI ESTÁ A CORREÇÃO MÁGICA: BATCH WRITE ---
+        // Criamos um lote de gravações. Ou grava TUDO ou não grava NADA.
+        const batch = __fbDB.batch();
 
-        // 6. Cria o documento do Usuário
-        // IMPORTANTE: Isso pode levar alguns segundos para propagar
-        await __fbDB.collection('users').doc(uid).set({
+        // A) Prepara a gravação na pasta CPFS
+        batch.set(cpfDocRef, { uid: uid });
+
+        // B) Prepara a gravação na pasta USERS
+        const userDocRef = __fbDB.collection('users').doc(uid);
+        batch.set(userDocRef, {
           name: name,
           email: email,
           cpf: cpf,
@@ -97,14 +101,18 @@
           acesso_ate: trialEndDate.toISOString(),
           current_session_id: sessionId
         });
+
+        // C) Executa as duas gravações simultaneamente
+        await batch.commit();
         
-        console.log(`Usuário ${uid} criado com trial até ${trialEndDate.toLocaleDateString()}.`);
+        console.log(`Cadastro completo. Usuário ${uid} e CPF ${cpf} gravados com sucesso.`);
         return { uid, acesso_ate: trialEndDate.toISOString() };
 
     } catch (error) {
-        // Se der erro no banco, tenta deletar o usuário do Auth para não ficar "zumbi"
+        console.error("Erro na gravação do banco:", error);
+        // Se der erro no banco, deletamos o usuário do Auth para não ficar "zumbi" (login sem dados)
         await userCred.user.delete();
-        throw error;
+        throw new Error("Erro ao salvar dados. Tente novamente.");
     }
   };
 
@@ -117,7 +125,6 @@
     // Atualiza o Session ID no Firestore para derrubar logins anteriores
     const newSessionId = Date.now().toString();
     
-    // Tenta atualizar a sessão. Se falhar, não impede o login, mas avisa.
     try {
         await __fbDB.collection('users').doc(userCred.user.uid).update({
             current_session_id: newSessionId
@@ -158,35 +165,26 @@
     const loginOverlay = document.getElementById('name-modal-overlay');
     const expiredModal = document.getElementById('expired-modal');
     
-    let unsubscribeUserDoc = null; // Para cancelar o listener quando deslogar
+    let unsubscribeUserDoc = null; 
 
     __fbAuth.onAuthStateChanged(async (user) => {
       if (user) {
-        // --- USUÁRIO ESTÁ LOGADO NO AUTH ---
         console.log("Auth detectado:", user.uid);
         
-        // Listener em Tempo Real
         unsubscribeUserDoc = __fbDB.collection('users').doc(user.uid)
             .onSnapshot((doc) => {
-                // === CORREÇÃO CRÍTICA ===
-                // Se o documento não existe, NÃO deslogar imediatamente.
-                // Pode ser um cadastro que acabou de ser feito e o Firestore ainda está salvando.
+                // Se o documento não existe, aguarda (pode ser delay do batch)
                 if (!doc.exists) {
                     console.warn("Documento do usuário ainda não disponível. Aguardando sincronização...");
-                    // Retornamos e esperamos o próximo 'snapshot' (quando o documento for criado)
                     return; 
                 }
-                // ========================
                 
                 const userData = doc.data();
-                
-                // 1. Verifica Validade do Acesso (Trial ou Pago)
                 const acessoAte = new Date(userData.acesso_ate);
                 const hoje = new Date();
 
                 if (hoje > acessoAte) {
                     console.warn("Acesso expirado!");
-                    // Não desinscreve aqui para permitir reativação em tempo real se pagar
                     if(expiredModal) {
                         expiredModal.classList.add('show');
                         if(loginOverlay) loginOverlay.classList.add('show');
@@ -194,15 +192,12 @@
                     return;
                 }
 
-                // 2. Verifica Sessão Única
                 const localSession = localStorage.getItem('my_session_id');
                 
                 if (!localSession) {
-                    // Primeira vez carregando após login
                     localStorage.setItem('my_session_id', userData.current_session_id);
                     onLoginSuccess(user, userData);
                 } else {
-                    // Sessão já existe. É igual a do banco?
                     if (userData.current_session_id && localSession !== userData.current_session_id) {
                         console.warn("Sessão duplicada detectada. Deslogando...");
                         alert("Sua conta foi acessada em outro dispositivo. Você será desconectado.");
@@ -211,20 +206,18 @@
                         FirebaseCourse.signOutUser();
                         return;
                     }
-                    // Tudo certo
                     onLoginSuccess(user, userData);
                 }
                 
             }, (error) => {
                 console.error("Erro no listener de usuário:", error);
-                // Se for erro de permissão, aí sim desloga
+                // Se for erro de permissão crítico, desloga
                 if (error.code === 'permission-denied') {
                     FirebaseCourse.signOutUser();
                 }
             });
 
       } else {
-        // --- USUÁRIO ESTÁ DESLOGADO ---
         if (unsubscribeUserDoc) unsubscribeUserDoc();
         localStorage.removeItem('my_session_id');
         
