@@ -18,6 +18,7 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 .pulse { animation: pulse 2s infinite; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
+
 /* === BARRA DE PROGRESSO === */
 @keyframes progress-gradient-flow {
   0% { background-position: 200% center; }
@@ -643,6 +644,7 @@ body.focus-mode { padding-bottom: 70px; }
   100% { left: 100%; opacity: 0; }
 }
 
+
 @keyframes sparkle {
   0% { transform: translateY(0) scale(1); opacity: 1; }
   100% { transform: translateY(-30px) scale(0); opacity: 0; }
@@ -865,7 +867,7 @@ body.focus-mode { padding-bottom: 70px; }
     justify-content: center !important;
 }
 
-/* === NOVOS ESTILOS PARA MELHORIAS (PONTOS 5, 4 e 6) === */
+/* === NOVOS ESTILOS PARA MELHORIAS === */
 
 /* Animação de Pulso para Botão Assinar (Ponto 5) */
 @keyframes pulse-glow {
