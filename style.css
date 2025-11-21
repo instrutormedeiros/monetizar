@@ -18,7 +18,6 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 .pulse { animation: pulse 2s infinite; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
-
 /* === BARRA DE PROGRESSO === */
 @keyframes progress-gradient-flow {
   0% { background-position: 200% center; }
@@ -644,7 +643,6 @@ body.focus-mode { padding-bottom: 70px; }
   100% { left: 100%; opacity: 0; }
 }
 
-
 @keyframes sparkle {
   0% { transform: translateY(0) scale(1); opacity: 1; }
   100% { transform: translateY(-30px) scale(0); opacity: 0; }
@@ -865,4 +863,71 @@ body.focus-mode { padding-bottom: 70px; }
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+}
+
+/* === NOVOS ESTILOS PARA MELHORIAS (PONTOS 5, 4 e 6) === */
+
+/* Animação de Pulso para Botão Assinar (Ponto 5) */
+@keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); transform: scale(1); }
+    50% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); transform: scale(1.05); }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); transform: scale(1); }
+}
+
+.pulse-button {
+    animation: pulse-glow 2s infinite;
+}
+
+.pulse-button-slow {
+    animation: pulse-glow 3s infinite;
+}
+
+/* Gradiente Animado para Botão de Login */
+@keyframes gradient-x {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.animate-gradient {
+    animation: gradient-x 3s ease infinite;
+}
+
+/* Estilo para o Botão do Google Drive (Ponto 6) */
+.drive-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem;
+    margin: 2rem 0;
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    font-weight: bold;
+    border-radius: 0.75rem;
+    text-decoration: none;
+    box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.drive-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 15px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+.drive-button i {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+}
+
+/* Ajuste para o Modal de Login Premium */
+.premium-login-modal {
+    border-radius: 1.5rem !important;
+    overflow: hidden !important;
+}
+
+/* Ajuste no Header */
+#main-header .fa-shield-alt {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
