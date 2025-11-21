@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curso de Formação | Bombeiro Civil e Brigadista</title>
     
-    <!-- PWA Manifest -->
+    <!-- Configurações do PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0b1220">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -49,57 +52,66 @@
                 <h2 class="text-xl font-semibold flex items-center text-blue-900 dark:text-white"><i class="fas fa-list-ul mr-3 text-orange-500"></i> Conteúdo</h2>
                 <button id="close-sidebar-button" class="text-2xl text-gray-500 dark:text-gray-400 hover:text-red-500"><i class="fas fa-times"></i></button>
             </div>
+            <!-- Botão Instalar Mobile -->
+            <div class="p-4 pb-0 lg:hidden">
+                 <button id="install-app-btn-mobile" class="hidden w-full bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-white py-2 px-4 rounded-lg font-bold border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex items-center justify-center">
+                    <i class="fas fa-download mr-2"></i> Instalar App
+                </button>
+            </div>
             <div class="p-4 flex-grow overflow-y-auto" id="mobile-module-container"></div>
         </div>
     </div>
     
     <div id="main-wrapper">
-        <!-- HEADER ATUALIZADO (Ponto 1 e 5) -->
+        <!-- CABEÇALHO ATUALIZADO (Fonte Maior + Botão Assinar + Instalar) -->
         <header id="main-header" class="fixed top-0 left-0 w-full z-40 backdrop-blur-lg bg-white/70 dark:bg-gray-900/70 shadow-md transition-all duration-500">
             <div class="container mx-auto px-4 md:px-6 max-w-7xl">
-                <div class="flex justify-between items-center py-4">
+                <div class="flex justify-between items-center py-4"> <!-- Padding aumentado -->
                     <div class="flex items-center space-x-4">
                         <div class="bg-gradient-to-tr from-red-600 to-orange-500 p-3 rounded-full shadow-md">
-                            <i class="fas fa-shield-alt text-3xl md:text-4xl text-white"></i>
+                            <i class="fas fa-shield-alt text-3xl md:text-4xl text-white"></i> <!-- Ícone maior -->
                         </div>
                         <div>
-                            <h1 class="text-2xl md:text-4xl font-serif font-bold text-gray-900 dark:text-white tracking-tight">Projeto Bravo Charlie</h1>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm md:text-base font-sans mt-1">Formando Profissionais de Elite</p>
+                            <!-- TÍTULO MAIOR -->
+                            <h1 class="text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-gray-900 dark:text-white tracking-tight leading-tight">Projeto Bravo Charlie</h1>
+                            <p class="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-sans mt-1 font-medium">Formando Profissionais de Elite</p>
                         </div>
                     </div>
 
-                    <div class="hidden lg:flex items-center space-x-5">
+                    <div class="hidden lg:flex items-center space-x-4">
                         <!-- BOTÃO ASSINAR PISCANDO -->
-                        <button id="header-subscribe-btn" class="action-button pulse-button bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-full shadow-lg border-2 border-green-400">
+                        <button id="header-subscribe-btn" class="action-button pulse-button bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-full shadow-lg border-2 border-green-400 transform hover:scale-105 transition-all">
                             <i class="fas fa-crown mr-2"></i> ASSINAR AGORA
                         </button>
                         
                         <!-- Botão Instalar App (Desktop) -->
-                        <button id="install-app-btn" class="hidden bg-gray-100/60 dark:bg-gray-800/60 py-2 px-4 rounded-full text-sm font-semibold border border-gray-200 dark:border-gray-700 hover:text-orange-500 transition-colors">
+                        <button id="install-app-btn" class="hidden bg-gray-100/80 dark:bg-gray-800/80 py-2 px-4 rounded-full text-sm font-bold border border-gray-300 dark:border-gray-600 hover:text-orange-500 hover:border-orange-500 transition-all">
                             <i class="fas fa-download mr-2"></i> Instalar App
                         </button>
 
-                        <div class="bg-gray-100/60 dark:bg-gray-800/60 py-2 px-4 rounded-full text-sm font-semibold border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
+                        <button id="home-button-desktop" title="Voltar ao Início" class="text-gray-800 dark:text-gray-100 text-xl hover:text-orange-500 transition-colors">
+                            <i class="fas fa-home"></i>
+                        </button>
+                        <div class="bg-gray-100/60 dark:bg-gray-800/60 py-1.5 px-4 rounded-full text-sm font-semibold border border-gray-200/50 dark:border-gray-700/50 backdrop-blur-sm">
                             <i class="fas fa-book-open mr-2 text-orange-500"></i>
                             <span id="course-modules-count">...</span> Módulos
                         </div>
-                        <button id="focus-mode-toggle" title="Modo Revisão" class="text-2xl text-gray-800 dark:text-gray-100 hover:text-orange-500 transition-colors">
+                        <button id="focus-mode-toggle" title="Modo Revisão" class="text-xl text-gray-800 dark:text-gray-100 hover:text-orange-500 transition-colors">
                             <i class="fas fa-book-reader"></i>
                         </button>
                         <button id="dark-mode-toggle-desktop" title="Mudar Tema">
                             <i class="fas fa-moon"></i>
                         </button>
-                        <button id="logout-button-header" title="Sair" class="text-gray-800 dark:text-gray-100 text-xl hover:text-red-500 transition-colors ml-2">
-                                <i class="fas fa-sign-out-alt"></i>
+                        <button id="logout-button-header" title="Sair" class="text-gray-800 dark:text-gray-100 text-lg hover:text-red-500 transition-colors ml-2">
+                             <i class="fas fa-sign-out-alt"></i>
                         </button>
                     </div>
 
                     <div class="lg:hidden flex items-center gap-3">
-                         <!-- Botão Assinar Mobile -->
-                         <button id="mobile-subscribe-btn" class="pulse-button bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+                        <button id="mobile-subscribe-btn" class="pulse-button bg-green-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-full shadow-lg border border-green-400">
                             <i class="fas fa-crown"></i> ASSINAR
                         </button>
-                        <button id="mobile-menu-button" class="text-gray-900 dark:text-white text-3xl hover:text-orange-500 transition-colors">
+                        <button id="mobile-menu-button" class="text-gray-900 dark:text-white text-2xl hover:text-orange-500 transition-colors">
                             <i class="fas fa-bars"></i>
                         </button>
                     </div>
@@ -185,18 +197,21 @@
     
     <button id="back-to-top" class="action-button fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full hidden justify-center items-center shadow-lg text-2xl"><i class="fas fa-arrow-up"></i></button>
     
-    <!-- MODAL DE LOGIN "PREMIUM" REFORMULADO (Ponto 4) -->
+    <!-- MODAL DE LOGIN "PREMIUM" ATUALIZADO (TÍTULO CORRIGIDO) -->
     <div id="name-prompt-modal" class="modal premium-login-modal w-full max-w-md mx-auto overflow-hidden" style="background: #0f172a; border: 1px solid #334155;">
         
-        <!-- Cabeçalho do Modal -->
+        <!-- Cabeçalho com Imagem de Fundo Abstrata ou Gradiente -->
         <div class="relative bg-gradient-to-b from-orange-600 to-gray-900 p-10 text-center overflow-hidden">
             <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
             <div class="relative z-10">
                 <div class="inline-block p-4 bg-black/40 rounded-full border-2 border-orange-500/50 mb-4 shadow-[0_0_20px_rgba(249,115,22,0.5)]">
                         <i class="fas fa-user-shield text-5xl text-orange-500"></i>
                 </div>
-                <h2 id="auth-title" class="text-4xl font-serif font-bold text-white tracking-wide drop-shadow-lg">Área do Aluno</h2>
-                <p id="auth-message" class="text-orange-100 text-sm mt-2 font-medium tracking-wider uppercase">Acesso Restrito • Elite Profissional</p>
+                <!-- TÍTULO ATUALIZADO -->
+                <h2 id="auth-title" class="text-2xl md:text-3xl font-serif font-bold text-white tracking-wide drop-shadow-lg leading-tight">
+                    Área do aluno - Acesso restrito<br>
+                    <span class="text-orange-500">Projeto Bravo Charlie</span>
+                </h2>
             </div>
         </div>
 
@@ -265,7 +280,7 @@
     </div>
     <div id="name-modal-overlay" class="modal-overlay bg-black/90 backdrop-blur-sm"></div>
 
-    <!-- MODAL DE PAGAMENTO ATUALIZADO (3 PLANOS - Ponto 3) -->
+    <!-- MODAL DE PAGAMENTO ATUALIZADO (3 PLANOS) -->
     <div id="expired-modal" class="modal bg-gray-900 text-white p-0 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-5xl mx-auto overflow-hidden">
         <div class="bg-gradient-to-r from-gray-900 to-gray-800 p-6 border-b border-gray-700 flex justify-between items-center">
             <div>
@@ -300,7 +315,7 @@
                     </div>
                 </div>
 
-                <!-- PLANO SEMESTRAL (DESTACADO) -->
+                <!-- PLANO SEMESTRAL (DESTACADO - REMOVIDO CERTIFICADO) -->
                 <div class="bg-gray-800 rounded-xl border-2 border-orange-500 shadow-[0_0_20px_rgba(234,88,12,0.15)] transform md:-translate-y-2 relative overflow-hidden flex flex-col">
                     <div class="absolute top-0 right-0 bg-orange-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">MAIS POPULAR</div>
                     <div class="p-5 text-center bg-gradient-to-b from-gray-800 to-gray-700 border-b border-gray-600">
@@ -316,7 +331,6 @@
                         <ul class="text-sm text-gray-300 space-y-2 mb-6 text-left w-full pl-4">
                             <li><i class="fas fa-check text-orange-500 mr-2"></i> Acesso por 6 meses</li>
                             <li><i class="fas fa-check text-orange-500 mr-2"></i> Vídeos e Fotos Liberados</li>
-                            <li><i class="fas fa-check text-orange-500 mr-2"></i> Certificado Digital</li>
                         </ul>
                         <a href="https://pay.infinitepay.io/pixmedeiros/VC1D-6jVuG1yMV1-49,99" target="_blank" class="w-full block text-center bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-500 hover:to-red-500 text-white font-bold py-4 rounded-lg transition-all shadow-lg mt-auto animate-pulse">
                             ASSINAR AGORA
