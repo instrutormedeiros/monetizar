@@ -19,16 +19,15 @@ h1, h2, h3 { font-family: 'Lora', serif; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
 
-/* === BARRA DE PROGRESSO === */
+/* === BARRA DE PROGRESSO CORRIGIDA (Ponto 3) === */
 @keyframes progress-gradient-flow {
   0% { background-position: 200% center; }
   100% { background-position: 0% center; }
 }
 
-/* O container que "gruda" no topo */
 .sticky-progress-wrapper {
     position: sticky;
-    top: 5.5rem; 
+    top: 5.5rem; /* Padrão para desktop */
     z-index: 39; 
     padding: 0.75rem 0; 
     background-color: rgba(255, 255, 255, 0.85);
@@ -37,6 +36,13 @@ h1, h2, h3 { font-family: 'Lora', serif; }
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     color: var(--light-text);
     position: relative;
+}
+
+/* Ajuste Específico para Mobile - Garante que a barra desça */
+@media (max-width: 1024px) {
+    .sticky-progress-wrapper {
+        top: 7.5rem; /* Aumentado para não ficar escondido */
+    }
 }
 
 .dark .sticky-progress-wrapper {
